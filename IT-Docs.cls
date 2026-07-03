@@ -58,14 +58,15 @@
 %  10. Caselle legenda ........... legendabox, legendaModalita, legendaStato
 %  11. Separatore righe .......... \rowsep
 %  12. Sistema riferimenti ....... defref, rif, rifdesc
+%  12b.Data documento automatica . \setdocdata, data max attivita
 %  13. Comando attivita .......... \att (con tracciamento data)
 %  14. Comando roadmap ........... \road
-%  15. Rapporto ore .............. addhours, contatore tothours
-%  16. Sottrazioni ............... addsubt, contatore totsubt
+%  15. Rapporto ore .............. addhours, totale fp \tothoursval
+%  16. Sottrazioni ............... addsubt, totale fp \totsubtval
 %  17. Tabelle riusabili ......... tabellaAttivita, tabellaRoadmap,
 %                                  tabellaOre, tabellaSottrazioni
 %  18. Sezione report ............ \reportsezione
-%  19. Componenti preventivo ..... comp, tabellaComponenti, preventivototale
+%  19. Componenti preventivo ..... comp, tabellaComponenti, preventivototali
 %  20. Toggle orientamento ....... setlandscape, setportrait
 %  21. Layout pagina ............. fancyhdr, secnumdepth, parindent
 %  22. Logo ...................... \showlogo
@@ -83,27 +84,32 @@
 % La data segue il formato ISO: AAAA/MM/GG.
 %
 \NeedsTeXFormat{LaTeX2e}[2020/10/01]
-\ProvidesClass{IT-Docs}[2025/11/24 v1.0 Classe documenti IT professionali]
+\ProvidesClass{IT-Docs}[2026/07/03 v1.1 Classe documenti IT professionali]
 
 
 % ─── Opzioni ────────────────────────────────────────────────────────────────
 %
-% Tutte le opzioni passate a IT-Docs vengono inoltrate alla classe article.
+% Tutte le opzioni passate a IT-Docs vengono inoltrate alla classe base.
 % Questo permette di scrivere:
 %   \documentclass[a4paper,9pt]{IT-Docs}
-% e avere a4paper e 9pt gestiti normalmente da article.
+% e avere a4paper e 9pt gestiti normalmente dalla classe base.
 %
-\DeclareOption*{\PassOptionsToClass{\CurrentOption}{article}}
+\DeclareOption*{\PassOptionsToClass{\CurrentOption}{extarticle}}
 \ProcessOptions\relax
 
 
 % ─── Classe base ────────────────────────────────────────────────────────────
 %
-% IT-Docs estende la classe article standard di LaTeX.
-% Article e adatta a documenti brevi senza capitoli — perfetta per
-% resoconti, report, preventivi e proposte di poche pagine.
+% IT-Docs estende extarticle (pacchetto extsizes), variante di article
+% adatta a documenti brevi senza capitoli — perfetta per resoconti,
+% report, preventivi e proposte di poche pagine.
 %
-\LoadClass{article}
+% Si usa extarticle e NON article perche article supporta solo 10/11/12pt:
+% l'opzione 9pt usata da tutti i documenti verrebbe SILENZIOSAMENTE
+% ignorata (warning "Unused global option(s)") componendo a 10pt.
+% extarticle supporta corpi da 8 a 20pt ed e drop-in compatibile.
+%
+\LoadClass{extarticle}
 %#endregion Classe base
 
 
@@ -151,6 +157,14 @@
 \RequirePackage{lmodern,textcomp}
 \RequirePackage[T1]{fontenc}
 \RequirePackage{microtype}
+
+% babel [italian]
+%   Localizzazione italiana: pattern di sillabazione corretti per il
+%   testo dei documenti, \today in italiano, nomi delle strutture.
+%   Senza babel la sillabazione usa i pattern inglesi (errata su testo
+%   italiano) e \today produce "July 3, 2026".
+%
+\RequirePackage[italian]{babel}
 
 
 % ─── Layout ──────────────────────────────────────────────────────────────────
@@ -202,9 +216,17 @@
 %   anche nelle righe successive.  Senza di essa, la larghezza puo
 %   variare da riga a riga producendo tabelle disallineate.
 %
+% hhline
+%   Filetti orizzontali parziali compatibili con colortbl.  \cline viene
+%   parzialmente COPERTA dal pannello colorato della riga successiva
+%   (\cellcolor/\rowcolor): la linea sopra le celle "Totale" risultava
+%   assottigliata.  \hhline non soffre del problema; va caricato dopo
+%   colortbl (gia caricato da xcolor[table]).
+%
 \RequirePackage{enumitem}
 \RequirePackage{ltablex,booktabs}
 \keepXColumns
+\RequirePackage{hhline}
 
 
 % ─── Grafica ────────────────────────────────────────────────────────────────
@@ -244,6 +266,19 @@
 \RequirePackage{nicefrac}
 \RequirePackage{xfp}
 
+% siunitx
+%   Formattazione professionale dei numeri.  Usato da \eur e \numero per
+%   stampare importi e quantita in convenzione italiana: virgola decimale,
+%   punto delle migliaia (es. 1.020,00).  I default italiani sono impostati
+%   qui una volta sola e valgono per ogni \num nei documenti.
+%
+\RequirePackage{siunitx}
+\sisetup{
+  output-decimal-marker={,},
+  group-separator={.},
+  group-minimum-digits=4,
+}
+
 
 % ─── Utility ────────────────────────────────────────────────────────────────
 %
@@ -273,8 +308,14 @@
 % trees
 %   Libreria TikZ per layout automatici ad albero.
 %
+% pgfcalendar
+%   Modulo PGF per i calcoli sulle date.  Usato per ricavare il giorno
+%   della settimana nella data documento automatica (vedi regione
+%   "Data documento automatica").
+%
 \RequirePackage{tikz}
 \usetikzlibrary{trees}
+\RequirePackage{pgfcalendar}
 
 
 % ─── Titoli ──────────────────────────────────────────────────────────────────
@@ -375,7 +416,7 @@
   \titleformat{\section}
     {\Large\bfseries\color{colPrimario}}%
     {}{0pt}{}%
-    [\vspace{-4pt}{\color{colPrimario}\titlerule[1.2pt]}]%
+    [\vspace{-1pt}{\color{colPrimario}\titlerule[1.2pt]}]%
   \titlespacing*{\section}{0pt}{12pt}{6pt}%
 }
 
@@ -474,7 +515,10 @@
 \newcommand{\staFatto}{{\color{colFatto}\footnotesize \faCheck}}
 \newcommand{\staFacendo}{{\color{colFacendo}\footnotesize \faSync}}
 \newcommand{\staDafare}{{\color{colDafare}\footnotesize \faThumbtack}}
-\newcommand{\staIdea}{{\color{colIdea}\footnotesize \faLightbulb[O]}}
+% NB: lo stile outline in fontawesome5 si seleziona con [regular];
+% la vecchia sintassi FontAwesome 4 "[O]" non esiste piu e causava un
+% font warning a ogni compilazione (con fallback allo stile solid).
+\newcommand{\staIdea}{{\color{colIdea}\footnotesize \faLightbulb[regular]}}
 %#endregion Icone stato
 
 
@@ -527,7 +571,10 @@
 
 \newcommand{\ppf}{\phantom{.5}}
 \newcommand{\vspaceheader}{\vspace{.3cm}}
-\newcommand{\hspaceRheader}{\hspace{1cm}}
+% \hspace* (indiscartabile): uno \hspace normale a fine riga di uno
+% \shortstack viene SCARTATO da TeX, azzerando il rientro dal margine
+% (e facendo finire il nome autore sotto il logo).
+\newcommand{\hspaceRheader}{\hspace*{1cm}}
 \newcommand{\tablespacing}{\renewcommand{\arraystretch}{1.8}}
 %#endregion Comandi di utilita
 
@@ -540,17 +587,34 @@
 % =============================================================================
 %
 % \eur{importo}
-%   Formatta un importo in euro con due decimali e il simbolo €.
+%   Formatta un importo in euro in convenzione italiana: virgola decimale,
+%   punto delle migliaia, sempre due decimali, spazio unificatore prima
+%   del simbolo € (niente a-capo tra numero e simbolo).
 %
-%   Esempio: \eur{1020} produce "1020.00 €"
+%   L'argomento puo essere un numero o un'espressione \fpeval-compatibile:
+%     \eur{1020}        -> "1.020,00 €"
+%     \eur{49.20}       -> "49,20 €"
+%     \eur{3*20.5}      -> "61,50 €"
 %
-%   Nota: il formato NON usa il separatore delle migliaia.
-%   Per importi con decimali specifiche, passare il valore gia formattato:
-%     \eur{1020.50} produce "1020.50.00 €" — ERRATO.
-%   In quel caso usare direttamente "1020.50 \texteuro".
+%   L'importo viene arrotondato a due decimali.  La formattazione e
+%   affidata a \num di siunitx (robusto in tabelle e argomenti mobili);
+%   i separatori italiani sono i default di classe (vedi \sisetup).
+%
+% \numero{valore}
+%   Numero semplice in convenzione italiana, senza decimali forzati:
+%     \numero{11}  -> "11"        \numero{1.5} -> "1,5"
+%   Usato per le quantita (es. totale ore).  Accetta espressioni \fpeval.
 % =============================================================================
 
-\newcommand{\eur}[1]{#1.00 \texteuro}
+\NewDocumentCommand{\eur}{m}{%
+  \num[
+    round-mode=places,
+    round-precision=2,
+    minimum-decimal-digits=2,
+  ]{\fpeval{round((#1),2)}}~\texteuro%
+}
+
+\NewDocumentCommand{\numero}{m}{\num{\fpeval{#1}}}
 %#endregion Formattazione valuta
 
 
@@ -656,23 +720,111 @@
 }
 
 \newcommand{\rif}[1]{%
-  \ifcsname ref@#1\endcsname
+  \ifcsname ref@#1\endcsname%
     #1%
-  \else
+  \else%
     \textbf{??#1??}%
     \ClassWarning{IT-Docs}{Riferimento '#1' non definito in riferimenti.tex}%
-  \fi
+  \fi%
 }
 
 \newcommand{\rifdesc}[1]{%
-  \ifcsname ref@#1\endcsname
-    \csname ref@#1\endcsname
-  \else
+  \ifcsname ref@#1\endcsname%
+    \csname ref@#1\endcsname%
+  \else%
     \textbf{??#1??}%
     \ClassWarning{IT-Docs}{Riferimento '#1' non definito in riferimenti.tex}%
-  \fi
+  \fi%
 }
 %#endregion Sistema riferimenti
+
+
+%#region Data documento automatica
+% =============================================================================
+%
+%  DATA DOCUMENTO AUTOMATICA
+%
+% =============================================================================
+%
+% \docdata e la data del documento (mostrata nell'header e nei testi
+% "al giorno ...").  Comportamento:
+%
+%   - Se il documento NON definisce \docdata, la classe la calcola da sola
+%     come la data PIU RECENTE tra le attivita \att, formattata col giorno
+%     della settimana (es. "mercoled\`i 14/01/2026").
+%
+%   - Per forzare una data specifica si usa \setdocdata{...} nel preambolo
+%     o in info.tex (equivale a definire \docdata a mano con \newcommand).
+%
+% Poiche la data massima si conosce solo dopo aver letto la tabella ma serve
+% gia nell'header (in cima a ogni pagina), il valore viene propagato tramite
+% il file .aux: come per \pageref{LastPage}, servono DUE compilazioni (il
+% Makefile le esegue gia).  Le date \att devono essere in formato GG/MM/AAAA.
+% =============================================================================
+
+\makeatletter
+\newcount\docdate@jul
+\newcount\docdate@wd
+\gdef\docdate@maxnum{0}     % massimo numerico AAAAMMGG visto finora
+\gdef\docdate@maxstr{}      % stringa GG/MM/AAAA del massimo
+\gdef\docdate@auxstr{}      % massimo dal run precedente (letto dal .aux)
+
+% Callback scritto nel .aux: propaga il massimo al run successivo.
+\newcommand{\docdatecache}[1]{\gdef\docdate@auxstr{#1}}
+
+% \docdate@track{GG/MM/AAAA} — aggiorna il massimo (chiamato da \att).
+% NB: si memorizza il VALORE espanso (\xdef), non il token \docdate@n,
+% altrimenti la successiva \edef ne cambierebbe anche il massimo.
+\def\docdate@track#1{\docdate@track@#1\@nil}
+\def\docdate@track@#1/#2/#3\@nil{%
+  \edef\docdate@n{\number\numexpr#3*10000+#2*100+#1\relax}%
+  \ifnum\docdate@n>\docdate@maxnum\relax
+    \xdef\docdate@maxnum{\docdate@n}%
+    \gdef\docdate@maxstr{#1/#2/#3}%
+  \fi}
+
+% Giorno della settimana italiano da GG/MM/AAAA (via pgfcalendar).
+\def\docdate@weekday#1{\expandafter\docdate@weekday@#1\@nil}
+\def\docdate@weekday@#1/#2/#3\@nil{%
+  \pgfcalendardatetojulian{#3-#2-#1}{\docdate@jul}%
+  \pgfcalendarjuliantoweekday{\docdate@jul}{\docdate@wd}%
+  \ifcase\docdate@wd
+    luned\`i\or marted\`i\or mercoled\`i\or gioved\`i\or
+    venerd\`i\or sabato\or domenica\fi}
+
+% Data automatica formattata "<giorno> GG/MM/AAAA".  Usa il valore del .aux
+% (stabile su tutto il run, header incluso); al primo run, quando il .aux non
+% c'e ancora, ripiega sul massimo corrente.
+\newcommand{\docdate@auto}{%
+  \edef\docdate@use{\docdate@auxstr}%
+  \ifx\docdate@use\@empty \edef\docdate@use{\docdate@maxstr}\fi
+  \ifx\docdate@use\@empty
+    \textbf{??data??}%
+  \else
+    \docdate@weekday{\docdate@use} \docdate@use
+  \fi}
+
+% A fine documento scrive il massimo nel .aux per il run successivo.
+% Se il massimo differisce da quanto letto dal .aux (prima compilazione,
+% o attivita nuova con data piu recente), l'header di questo run mostra
+% ancora la data vecchia: avvisa di ricompilare, come fa lastpage.
+\AtEndDocument{%
+  \ifx\docdate@maxstr\@empty\else
+    \immediate\write\@auxout{\string\docdatecache{\docdate@maxstr}}%
+    \ifx\docdate@auxstr\docdate@maxstr\else
+      \ClassWarningNoLine{IT-Docs}{%
+        Data documento automatica cambiata (\docdate@maxstr):\MessageBreak
+        ricompilare per aggiornare l'header}%
+    \fi
+  \fi}
+
+% Override esplicito della data documento.
+\newcommand{\setdocdata}[1]{\def\docdata{#1}}
+
+% Se il documento non ha definito \docdata, usala automatica.
+\AtBeginDocument{\@ifundefined{docdata}{\def\docdata{\docdate@auto}}{}}
+\makeatother
+%#endregion Data documento automatica
 
 
 %#region Comando attivita
@@ -685,7 +837,8 @@
 % \att{data}{riferimento}{descrizione}{modalita}{ore}
 %
 %   Genera una riga nella tabella attivita.  Se la data e uguale alla
-%   riga precedente, la cella "data" resta vuota per evitare ripetizioni.
+%   riga precedente, la cella "data" resta vuota per evitare ripetizioni
+%   (a meno che non sia attivo \ripetidate, vedi sotto).
 %
 %   Argomenti:
 %     #1 = data        (es. "17/09/2025")
@@ -696,18 +849,42 @@
 %
 %   Il tracciamento della data precedente usa il token \att@prevdate,
 %   inizializzato a "@NONE@" all'inizio di ogni tabella da \tabellaAttivita.
+%
+%   \ripetidate (nel preambolo o in info.tex) disattiva la deduplica:
+%   la data viene stampata su ogni riga.  Default: deduplica attiva.
+%
+%   Ogni \att alimenta inoltre la data documento automatica: vedi la regione
+%   "Data documento automatica".
 % =============================================================================
 
+% Le righe non vengono stampate direttamente: ogni \att le ACCUMULA nel
+% token-macro \attbody (separatore e zebra inclusi), che \tabellaAttivita
+% inserisce poi in un colpo solo dopo l'intestazione.  In questo modo il
+% corpo della tabella e un singolo blocco "pulito": niente riga fantasma
+% in cima o in fondo (problema che si presenta con \rowcolors quando una
+% riga comincia con una macro/assegnazione anziche con contenuto).
 \makeatletter
 \gdef\att@prevdate{@NONE@}
+\newcounter{attrow}
+
+% Deduplica data: di default, se la data e uguale alla riga precedente la
+% cella "Data" resta vuota.  \ripetidate (nel preambolo / info.tex) disattiva
+% la deduplica e fa stampare la data su OGNI riga.
+\newif\if@attrep \@attrepfalse
+\newcommand{\ripetidate}{\@attreptrue}
 
 \NewDocumentCommand{\att}{m m +m m m}{%
-  \ifnum\pdfstrcmp{#1}{\att@prevdate}=0\relax\else #1\fi
-    & #2
-    & #3
-    & #4
-    & #5\ppf \\
+  \stepcounter{attrow}%
+  \docdate@track{#1}% alimenta la data documento automatica
+  \ifnum\value{attrow}>1 \g@addto@macro\attbody{\\}\fi
+  \ifodd\value{attrow}\else \g@addto@macro\attbody{\rowcolor{colZebra}}\fi
+  \if@attrep
+    \g@addto@macro\attbody{#1}%
+  \else
+    \ifnum\pdfstrcmp{#1}{\att@prevdate}=0\relax\else \g@addto@macro\attbody{#1}\fi
+  \fi
   \gdef\att@prevdate{#1}%
+  \g@addto@macro\attbody{& #2 & #3 & #4 & #5\ppf}%
 }
 \makeatother
 %#endregion Comando attivita
@@ -722,8 +899,9 @@
 %
 % \road{riferimento}{descrizione}{stato}{urgenza}{commenti}
 %
-%   Genera una riga nella tabella roadmap.  La prima riga non ha
-%   separatore sopra; le successive sono precedute da \rowsep (\\).
+%   Accumula una riga nel token-macro \roadbody (separatore e zebra
+%   inclusi), che \tabellaRoadmap inserisce poi in blocco.  Non stampa
+%   nulla di per se.
 %
 %   Argomenti:
 %     #1 = riferimento (es. "\rif{R2501}")
@@ -732,23 +910,21 @@
 %     #4 = urgenza     (testo libero)
 %     #5 = commenti    (argomento +m per contenuto multi-riga)
 %
-%   Il flag \firstroadrow viene resettato da \tabellaRoadmap.
+%   Il contatore roadrow viene azzerato da \tabellaRoadmap.
 % =============================================================================
 
-\newif\iffirstroadrow \firstroadrowtrue
+% Come \att, le righe vengono accumulate in \roadbody e inserite in blocco
+% da \tabellaRoadmap (vedi nota su \att): evita la riga fantasma di \rowcolors.
+\makeatletter
+\newcounter{roadrow}
 
 \NewDocumentCommand{\road}{m +m m m +m}{%
-  \iffirstroadrow
-    \global\firstroadrowfalse
-  \else
-    \rowsep
-  \fi
-  #1
-    & #2
-    & #3
-    & #4
-    & #5
+  \stepcounter{roadrow}%
+  \ifnum\value{roadrow}>1 \g@addto@macro\roadbody{\\}\fi
+  \ifodd\value{roadrow}\else \g@addto@macro\roadbody{\rowcolor{colZebra}}\fi
+  \g@addto@macro\roadbody{#1 & #2 & #3 & #4 & #5}%
 }
+\makeatother
 %#endregion Comando roadmap
 
 
@@ -761,34 +937,30 @@
 %
 % Sistema per accumulare ore lavorate e calcolare l'importo dovuto.
 %
-% tothours (contatore)
-%   Accumula il totale delle ore.  Resettato a zero da \tabellaOre.
+% \tothoursval (macro numerica)
+%   Accumula il totale delle ore in virgola mobile (\fpeval): supporta
+%   mezze ore e frazioni (es. 1.5), cosa impossibile con un contatore
+%   LaTeX intero.  Azzerata da \tabellaOre.
 %
 % \addhours{data}{ore}
-%   Aggiunge una riga alla tabella ore.  Calcola automaticamente
-%   l'importo come ore * \doctariffa usando \fpeval (calcolo floating point).
-%   La prima riga usa \hline\hline, le successive \hline singolo.
-%
-% \tabellaOre{file}
-%   Genera la tabella ore completa: un riepilogo a destra con data, ore
-%   e importo per ogni voce, e una riga "Totale" con sfondo colTotale.
-%   Il file viene incluso con \input e deve contenere chiamate \addhours.
+%   Accumula una riga della tabella ore nel token-macro \hoursbody
+%   (separatore e zebra inclusi, come \att) e somma le ore al totale.
+%   L'importo e calcolato come ore * \doctariffa.  Non stampa nulla
+%   di per se: e \tabellaOre a comporre la tabella.
 % =============================================================================
 
-\newcounter{tothours}
-\setcounter{tothours}{0}
+\makeatletter
+\gdef\tothoursval{0}
+\newcounter{hourrow}
 
-\newif\iffirsthourrow \firsthourrowtrue
-
-\newcommand{\addhours}[2]{%
-  \iffirsthourrow
-    \\ \hline\hline \global\firsthourrowfalse
-  \else
-    \\ \hline
-  \fi
-  #1 & #2 & \eur{\fpeval{(#2)*\doctariffa}}
-  \addtocounter{tothours}{#2}%
+\NewDocumentCommand{\addhours}{m m}{%
+  \stepcounter{hourrow}%
+  \ifnum\value{hourrow}>1 \g@addto@macro\hoursbody{\\}\fi
+  \ifodd\value{hourrow}\else \g@addto@macro\hoursbody{\rowcolor{colZebra}}\fi
+  \g@addto@macro\hoursbody{#1 & \numero{#2} & \eur{(#2)*\doctariffa}}%
+  \xdef\tothoursval{\fpeval{\tothoursval+(#2)}}%
 }
+\makeatother
 %#endregion Rapporto ore
 
 
@@ -801,28 +973,28 @@
 %
 % Sistema per accumulare sottrazioni (acquisti, rimborsi, deduzioni).
 %
-% totsubt (contatore)
-%   Accumula il totale delle sottrazioni.  Resettato da \tabellaSottrazioni.
+% \totsubtval (macro numerica)
+%   Accumula il totale delle sottrazioni in virgola mobile: supporta
+%   importi con centesimi (es. 12.99), lo scenario normale per gli
+%   acquisti.  Azzerata da \tabellaSottrazioni.
 %
 % \addsubt{data}{info}{importo}
-%   Aggiunge una riga alla tabella sottrazioni.
-%   Stessa logica di separazione riga di \addhours.
+%   Accumula una riga della tabella sottrazioni nel token-macro
+%   \subtbody, con la stessa logica di \addhours.
 % =============================================================================
 
-\newcounter{totsubt}
-\setcounter{totsubt}{0}
+\makeatletter
+\gdef\totsubtval{0}
+\newcounter{subtrow}
 
-\newif\iffirstsubtrow \firstsubtrowtrue
-
-\newcommand{\addsubt}[3]{%
-  \iffirstsubtrow
-    \\ \hline\hline \global\firstsubtrowfalse
-  \else
-    \\ \hline
-  \fi
-  #1 & #2 & \eur{#3}
-  \addtocounter{totsubt}{#3}%
+\NewDocumentCommand{\addsubt}{m m m}{%
+  \stepcounter{subtrow}%
+  \ifnum\value{subtrow}>1 \g@addto@macro\subtbody{\\}\fi
+  \ifodd\value{subtrow}\else \g@addto@macro\subtbody{\rowcolor{colZebra}}\fi
+  \g@addto@macro\subtbody{#1 & #2 & \eur{#3}}%
+  \xdef\totsubtval{\fpeval{\totsubtval+(#3)}}%
 }
+\makeatother
 %#endregion Sottrazioni
 
 
@@ -849,11 +1021,13 @@
 %
 \makeatletter
 \newcommand{\tabellaAttivita}[1]{%
+  \gdef\attbody{}%
   \gdef\att@prevdate{@NONE@}%
+  \setcounter{attrow}{0}%
+  \input{#1}% le chiamate \att riempiono \attbody, senza stampare nulla
   {\tablespacing
   \setlength{\aboverulesep}{0pt}%
   \setlength{\belowrulesep}{0pt}%
-  \rowcolors{2}{}{colZebra}%
   \begin{tabularx}{\textwidth}{
       l
       | >{\ttfamily\arraybackslash}p{0.06\linewidth}
@@ -863,7 +1037,7 @@
   }
       \textbf{Data} & \textnormal{\textbf{Rif.}} & \textbf{Descrizione attivit\`a} & \multicolumn{2}{c}{\textnormal{\textbf{Ore}}}
       \\ \midrule[\heavyrulewidth]
-  \input{#1}
+  \attbody
   \end{tabularx}
   }%
 }
@@ -877,14 +1051,15 @@
 %     Rif. | Descrizione | Stato | Urgenza | Commenti
 %
 %   Il file deve contenere chiamate \road{}{}{}{}{}.
-%   Resetta il flag \firstroadrow.
+%   Azzera il contatore roadrow e raccoglie le righe in \roadbody.
 %
 \newcommand{\tabellaRoadmap}[1]{%
-  \global\firstroadrowtrue
+  \gdef\roadbody{}%
+  \setcounter{roadrow}{0}%
+  \input{#1}% le chiamate \road riempiono \roadbody
   {\tablespacing
   \setlength{\aboverulesep}{0pt}%
   \setlength{\belowrulesep}{0pt}%
-  \rowcolors{2}{}{colZebra}%
   \begin{tabularx}{\textwidth}{
       >{\ttfamily}l
       | >{\arraybackslash}X
@@ -894,8 +1069,7 @@
   }
       \textnormal{\textbf{\normalsize Rif.}} & \textbf{Descrizione} & \textbf{Stato} & \textbf{Urgenza} & \textbf{Commenti}
       \\ \midrule[\heavyrulewidth]
-  \input{#1}
-      \\
+  \roadbody
   \end{tabularx}
   }%
 }
@@ -904,78 +1078,104 @@
 % ─── Tabella ore ────────────────────────────────────────────────────────────
 %
 % \tabellaOre{file}
-%   Layout a due colonne: testo a sinistra, tabella ore a destra.
-%   La tabella mostra data, ore e importo per ogni voce, con una riga
-%   totale in basso con sfondo colTotale.
+%   Layout a due colonne: etichetta (e tariffa oraria) a sinistra,
+%   tabella ore a destra.  Stesso linguaggio grafico delle altre tabelle
+%   della classe: righe zebrate, filetto pesante sotto l'intestazione,
+%   nessuna cornice esterna.  In coda la riga "Totale" staccata, con
+%   sfondo colTotale e bordi propri (\hhline, che convive con colortbl).
 %
-%   Il file deve contenere chiamate \addhours{}{}.
-%   Resetta il contatore tothours e il flag firsthourrow.
+%   La tariffa oraria (\doctariffa) viene dichiarata sotto l'etichetta:
+%   in un documento quasi-fattura il fattore unitario degli importi e
+%   un'informazione contrattuale che il cliente deve poter verificare.
 %
+%   Il file deve contenere chiamate \addhours{}{}, che accumulano le
+%   righe in \hoursbody (vedi regione "Rapporto ore").
+%
+%   Le larghezze etichetta/tabella (0.40/0.55) sono condivise con
+%   \tabellaSottrazioni: impilate nella stessa pagina, le due tabelle
+%   condividono la gabbia e la colonna Importo resta incolonnata.
+%
+\makeatletter
 \newcommand{\tabellaOre}[1]{%
-  \global\firsthourrowtrue
-  \setcounter{tothours}{0}%
-  \noindent\begin{minipage}[t]{0.55\textwidth}
-      \vspace{17.5pt}
+  \gdef\hoursbody{}%
+  \gdef\tothoursval{0}%
+  \setcounter{hourrow}{0}%
+  \input{#1}% le chiamate \addhours riempiono \hoursbody
+  \noindent\begin{minipage}[t]{0.40\textwidth}
+      \vspace{0pt}
       Nuove ore accumulate al giorno \docdata:
+      \par\vspace{2mm}
+      {\small\itshape Tariffa oraria: \eur{\doctariffa}/h}
   \end{minipage}
   \hfill
-  \noindent\begin{minipage}[t]{0.4\textwidth}
+  \noindent\begin{minipage}[t]{0.55\textwidth}
       \vspace{0pt}
-      \begin{flushright}
-          \begin{tabularx}{\textwidth}{
-              | X
-              | >{\centering\arraybackslash}p{15mm}
-              | >{\raggedleft\arraybackslash}p{20mm} |
-          }
-              \hline
-              \textbf{Data} & \textbf{Ore} & \textbf{Importo}
-              \input{#1} \\ \hline
-              \noalign{\vskip 6pt} \cline{2-3}
-              \multicolumn{1}{r|}{\textbf{Totale}}
-                & \cellcolor{colTotale}\textbf{\arabic{tothours}}
-                & \cellcolor{colTotale}\textbf{\eur{\fpeval{round(\arabic{tothours}*\doctariffa,2)}}}
-              \\ \cline{2-3}
-          \end{tabularx}
-      \end{flushright}
+      {\tablespacing
+      \setlength{\aboverulesep}{0pt}%
+      \setlength{\belowrulesep}{0pt}%
+      \begin{tabularx}{\textwidth}{
+          X
+          | >{\centering\arraybackslash}p{15mm}
+          | >{\raggedleft\arraybackslash}p{20mm}
+      }
+          \textbf{Data} & \textbf{Ore} & \textbf{Importo}
+          \\ \midrule[\heavyrulewidth]
+          \hoursbody
+          \\ \noalign{\vskip 6pt} \hhline{~|--|}
+          \multicolumn{1}{r}{\textbf{Totale}}
+            & \multicolumn{1}{|c|}{\cellcolor{colTotale}\textbf{\numero{\tothoursval}}}
+            & \multicolumn{1}{r|}{\cellcolor{colTotale}\textbf{\eur{\tothoursval*\doctariffa}}}
+          \\ \hhline{~|--|}
+      \end{tabularx}
+      }%
   \end{minipage}
 }
+\makeatother
 
 
 % ─── Tabella sottrazioni ───────────────────────────────────────────────────
 %
 % \tabellaSottrazioni{file}
-%   Layout simile a \tabellaOre ma per le sottrazioni.
-%   Colonne: Data | Info | Importo, con riga totale.
+%   Layout e stile identici a \tabellaOre (stesse larghezze 0.40/0.55 e
+%   stessa colonna Importo da 20mm: impilate, le due tabelle restano
+%   incolonnate).  Colonne: Data | Info | Importo, riga Totale in coda.
 %
-%   Il file deve contenere chiamate \addsubt{}{}{}.
+%   Il file deve contenere chiamate \addsubt{}{}{}, che accumulano le
+%   righe in \subtbody (vedi regione "Sottrazioni").
 %
+\makeatletter
 \newcommand{\tabellaSottrazioni}[1]{%
-  \global\firstsubtrowtrue
-  \setcounter{totsubt}{0}%
-  \noindent\begin{minipage}[t]{0.35\textwidth}
-      \vspace{17.5pt}
+  \gdef\subtbody{}%
+  \gdef\totsubtval{0}%
+  \setcounter{subtrow}{0}%
+  \input{#1}% le chiamate \addsubt riempiono \subtbody
+  \noindent\begin{minipage}[t]{0.40\textwidth}
+      \vspace{0pt}
       Sottrazioni al giorno \docdata:
   \end{minipage}
   \hfill
   \noindent\begin{minipage}[t]{0.55\textwidth}
       \vspace{0pt}
-      \begin{flushright}
-          \begin{tabularx}{\textwidth}{
-              | >{\raggedright\arraybackslash}p{25mm}
-              | X
-              | >{\raggedleft\arraybackslash}p{20mm} |
-          }
-              \hline
-              \textbf{Data} & \textbf{Info} & \textbf{Importo}
-              \input{#1} \\ \hline
-              \noalign{\vskip 6pt} \cline{3-3}
-              \multicolumn{2}{r|}{\textbf{Totale}}
-                & \cellcolor{colTotale}\textbf{\eur{\arabic{totsubt}}}
-              \\ \cline{3-3}
-          \end{tabularx}
-      \end{flushright}
+      {\tablespacing
+      \setlength{\aboverulesep}{0pt}%
+      \setlength{\belowrulesep}{0pt}%
+      \begin{tabularx}{\textwidth}{
+          >{\raggedright\arraybackslash}p{25mm}
+          | X
+          | >{\raggedleft\arraybackslash}p{20mm}
+      }
+          \textbf{Data} & \textbf{Info} & \textbf{Importo}
+          \\ \midrule[\heavyrulewidth]
+          \subtbody
+          \\ \noalign{\vskip 6pt} \hhline{~~|-|}
+          \multicolumn{2}{r}{\textbf{Totale}}
+            & \multicolumn{1}{|r|}{\cellcolor{colTotale}\textbf{\eur{\totsubtval}}}
+          \\ \hhline{~~|-|}
+      \end{tabularx}
+      }%
   \end{minipage}
 }
+\makeatother
 %#endregion Tabelle riusabili
 
 
@@ -1010,45 +1210,68 @@
 %
 %
 % \comp{componente}{range}{proposta}{prezzo}
-%   Riga nella tabella componenti.  La prima riga non ha separatore;
-%   le successive sono precedute da \rowsep.
+%   Accumula una riga nel token-macro \compbody (separatore e zebra
+%   inclusi); non stampa nulla di per se.
 %
 % \compcategoria{nome}
 %   Riga separatrice con il nome della categoria in grassetto
 %   (es. "Altro", "Accessori").  Occupa tutte e 4 le colonne.
+%   Anch'essa viene accumulata in \compbody.
 %
 % \tabellaComponenti{file}
 %   Tabella a 4 colonne con righe zebrate:
 %     Componente | Range | Proposta | Prezzo
 %   Il file deve contenere chiamate \comp e/o \compcategoria.
+%   Azzera il contatore comprow e raccoglie le righe in \compbody.
+%
+% \preventivototali{righe}{etichetta finale}{importo finale}
+%   Blocco totali unico allineato a destra, incolonnato con la colonna
+%   Prezzo della tabella componenti (stessa larghezza 20mm).  Le righe
+%   secondarie (argomento 1, anche vuoto) sono composte in tono normale
+%   con \totriga; la riga finale — l'importo che il cliente paga — e
+%   l'UNICA evidenziata: grassetto, sfondo colTotale, bordi propri.
+%
+%   Esempio:
+%     \preventivototali{%
+%       \totriga{Totale indicativo (esente IVA)}{1250}%
+%     }{Totale indicativo (IVA inclusa)}{1580}
+%
+% \totriga{etichetta}{importo}
+%   Riga secondaria del blocco totali (usare solo dentro il primo
+%   argomento di \preventivototali).
 %
 % \preventivototale{etichetta}{importo}
-%   Riga di totale allineata a destra con cella evidenziata in colTotale.
-%   Esempio: \preventivototale{Totale indicativo IVA inclusa}{1580}
+%   COMPATIBILITA: blocco totali con la sola riga finale.  Equivale a
+%   \preventivototali{}{etichetta}{importo}.
 % =============================================================================
 
-\newif\iffirstcomprow \firstcomprowtrue
+% Come \att/\road, le righe (comp e categorie) sono accumulate in \compbody
+% e inserite in blocco da \tabellaComponenti: evita la riga fantasma.
+\makeatletter
+\newcounter{comprow}
 
 \NewDocumentCommand{\comp}{m m m m}{%
-  \iffirstcomprow
-    \global\firstcomprowfalse
-  \else
-    \rowsep
-  \fi
-  #1 & #2 & #3 & \eur{#4}
+  \stepcounter{comprow}%
+  \ifnum\value{comprow}>1 \g@addto@macro\compbody{\\}\fi
+  \ifodd\value{comprow}\else \g@addto@macro\compbody{\rowcolor{colZebra}}\fi
+  \g@addto@macro\compbody{#1 & #2 & #3 & \eur{#4}}%
 }
 
 \newcommand{\compcategoria}[1]{%
-  \\
-  \multicolumn{4}{l}{\textbf{#1}}
+  \stepcounter{comprow}%
+  \ifnum\value{comprow}>1 \g@addto@macro\compbody{\\}\fi
+  \ifodd\value{comprow}\else \g@addto@macro\compbody{\rowcolor{colZebra}}\fi
+  \g@addto@macro\compbody{\multicolumn{4}{l}{\textbf{#1}}}%
 }
+\makeatother
 
 \newcommand{\tabellaComponenti}[1]{%
-  \global\firstcomprowtrue
+  \gdef\compbody{}%
+  \setcounter{comprow}{0}%
+  \input{#1}% le chiamate \comp/\compcategoria riempiono \compbody
   {\tablespacing
   \setlength{\aboverulesep}{0pt}%
   \setlength{\belowrulesep}{0pt}%
-  \rowcolors{2}{}{colZebra}%
   \begin{tabularx}{\textwidth}{
       >{\arraybackslash}X
       | >{\raggedleft\arraybackslash}p{25mm}
@@ -1057,20 +1280,37 @@
   }
       \textbf{Componente} & \textbf{Range} & \textbf{Proposta} & \textbf{Prezzo}
       \\ \midrule[\heavyrulewidth]
-  \input{#1}
-      \\
+  \compbody
   \end{tabularx}
   }%
 }
 
-\newcommand{\preventivototale}[2]{%
+% Riga secondaria del blocco totali: etichetta + importo, tono normale.
+\newcommand{\totriga}[2]{#1 & \eur{#2} \\}
+
+% Blocco totali: righe secondarie, poi la riga finale evidenziata con
+% bordi propri via \hhline (convive con \cellcolor, vedi nota hhline).
+% La colonna importi replica esattamente la colonna Prezzo della tabella
+% componenti (p{20mm}): i numeri restano incolonnati.
+\NewDocumentCommand{\preventivototali}{+m m m}{%
   \vspace{4mm}%
   \noindent\hfill
-  \begin{tabular}{r >{\raggedleft\arraybackslash}p{25mm}}
-    \textbf{#1} & \cellcolor{colTotale}\textbf{\eur{#2}} \\
+  {\tablespacing
+  \setlength{\aboverulesep}{0pt}%
+  \setlength{\belowrulesep}{0pt}%
+  \begin{tabular}{r >{\raggedleft\arraybackslash}p{20mm}}
+    #1%
+    \noalign{\vskip 3pt}\hhline{~|-|}
+    \textbf{#2}
+      & \multicolumn{1}{|>{\raggedleft\arraybackslash}p{20mm}|}{\cellcolor{colTotale}\textbf{\eur{#3}}}
+    \\ \hhline{~|-|}
   \end{tabular}%
+  }%
   \par
 }
+
+% Compatibilita con la vecchia API a riga singola.
+\newcommand{\preventivototale}[2]{\preventivototali{}{#1}{#2}}
 %#endregion Componenti preventivo
 
 
@@ -1158,7 +1398,7 @@
 %
 \pagestyle{fancy}
 \fancyhf{}
-\renewcommand{\headrule}{\hrule height 0.8pt}
+\renewcommand{\headrule}{{\color{colPrimario}\hrule height 0.8pt}}
 \renewcommand{\footrulewidth}{0pt}
 
 
@@ -1172,16 +1412,19 @@
 
 % ─── Contenuto header ──────────────────────────────────────────────────────
 
-\fancyhead[L]{
-  \shortstack[l]{\textbf{\docstudio}\\\docluogo \vspaceheader}
+\fancyhead[L]{%
+  \shortstack[l]{\textbf{\docstudio}\\\docluogo \vspaceheader}%
 }
 
 \fancyhead[C]{%
-  \shortstack[c]{\textbf{\large \doctitolo}\\ \docdata \vspaceheader}
+  \shortstack[c]{\textbf{\large \doctitolo}\\ \docdata \vspaceheader}%
 }
 
-\fancyhead[R]{
-    \shortstack[r]{\textbf{\docautore\hspaceRheader}\hspaceRheader\\ \href{mailto:\docmail}{\docmail}\hspaceRheader\vspaceheader}
+% Entrambe le righe della colonna destra usano UN SOLO \hspaceRheader:
+% cosi nome e e-mail condividono lo stesso filo destro, comunque fuori
+% dall'ingombro del logo posizionato da \showlogo nell'angolo.
+\fancyhead[R]{%
+    \shortstack[r]{\textbf{\docautore}\hspaceRheader\\ \href{mailto:\docmail}{\docmail}\hspaceRheader\vspaceheader}%
 }
 %#endregion Layout pagina
 
