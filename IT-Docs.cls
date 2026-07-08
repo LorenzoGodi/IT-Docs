@@ -58,6 +58,7 @@
 %  10. Caselle legenda ........... legendabox, legendaModalita, legendaStato
 %  11. Configurazione ............ \ITDocsSetup (colori, logo), \doclogo
 %  12. Sistema riferimenti ....... defref, rif, rifdesc
+%  12a.Titolo documento automatico  tipo + cartella dal Makefile
 %  12b.Data documento automatica . \setdocdata, data max attivita
 %  13. Comando attivita .......... \att (tracciamento data, \ripetidate)
 %  14. Comando roadmap ........... \road
@@ -368,6 +369,7 @@
 % \docstudio e \docautore sono ormai definiti.
 %
 \AtBeginDocument{%
+  \itdocs@autotitolo% definisce \doctitolo se mancante (titolo automatico)
   \hypersetup{
     pdftitle={\doctitolo\ (\docstudio)},
     pdfauthor={\docautore},
@@ -804,6 +806,77 @@
   \fi%
 }
 %#endregion Sistema riferimenti
+
+
+%#region Titolo documento automatico
+% =============================================================================
+%
+%  TITOLO DOCUMENTO AUTOMATICO
+%
+% =============================================================================
+%
+% \doctitolo e il titolo del documento (header e metadati PDF).
+% Se il documento NON lo definisce, la classe lo costruisce da tipo e
+% cartella del documento, che il Makefile passa a pdflatex:
+%
+%   pdflatex "\def\itdocstipo{resoconto}\def\itdocsdirname{2025-3}\input{main.tex}"
+%     -> \doctitolo = "RESOCONTO 2025/3"
+%
+% Tipi riconosciuti: resoconto, report, preventivo, proposta (mappa
+% qui sotto).  Lo storico — o qualunque documento con un titolo suo —
+% continua a definire \doctitolo a mano, che ha sempre la precedenza.
+%
+% Compilando A MANO (pdflatex main.tex, senza le \def del Makefile) il
+% titolo automatico non e disponibile: il documento mostra ??titolo??
+% con un warning.  Compilare via make, oppure definire \doctitolo.
+% =============================================================================
+
+\makeatletter
+% Mappa tipo -> etichetta del titolo
+\def\itdocs@titolo@resoconto{RESOCONTO}
+\def\itdocs@titolo@report{REPORT TECNICO}
+\def\itdocs@titolo@preventivo{PREVENTIVO}
+\def\itdocs@titolo@proposta{PROPOSTA}
+
+% "2025-3" -> "2025/3"
+\def\itdocs@dirtonum#1-#2\@nil{#1/#2}
+
+% Guardia sul formato cartella <numero>-<numero>
+\ExplSyntaxOn
+\NewDocumentCommand{\itdocs@ifdirnum}{mmm}
+  { \regex_match:nnTF { \A\d+-\d+\Z } {#1} {#2} {#3} }
+\ExplSyntaxOff
+
+% Chiamato a inizio documento (prima dei metadati PDF): definisce
+% \doctitolo se il documento non l'ha fatto.
+\newcommand{\itdocs@autotitolo}{%
+  \@ifundefined{doctitolo}{%
+    \ifdefined\itdocstipo
+      \ifcsname itdocs@titolo@\itdocstipo\endcsname%
+        \expandafter\itdocs@ifdirnum\expandafter{\itdocsdirname}%
+          {\protected@edef\doctitolo{%
+             \csname itdocs@titolo@\itdocstipo\endcsname\space
+             \expandafter\itdocs@dirtonum\itdocsdirname\@nil}}%
+          {\def\doctitolo{\textbf{??titolo??}}%
+           \ClassWarningNoLine{IT-Docs}{%
+             Cartella '\itdocsdirname' non in formato <anno>-<n>:\MessageBreak
+             impossibile costruire il titolo automatico}}%
+      \else%
+        \def\doctitolo{\textbf{??titolo??}}%
+        \ClassWarningNoLine{IT-Docs}{%
+          Tipo documento '\itdocstipo' senza titolo automatico:\MessageBreak
+          definire \string\doctitolo\space in info.tex}%
+      \fi%
+    \else
+      \def\doctitolo{\textbf{??titolo??}}%
+      \ClassWarningNoLine{IT-Docs}{%
+        \string\doctitolo\space non definito e compilazione fuori da make:\MessageBreak
+        compilare con "make" oppure definire \string\doctitolo}%
+    \fi
+  }{}%
+}
+\makeatother
+%#endregion Titolo documento automatico
 
 
 %#region Data documento automatica
