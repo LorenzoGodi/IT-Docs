@@ -1412,20 +1412,25 @@
 % Prima lettera di un codice ("I2501" -> "I")
 \def\reg@first#1#2\@nil{#1}
 
-% Riga voce e riga di gruppo: stesso pattern accumulatore/zebra delle
-% altre tabelle (le righe di gruppo contano nella zebratura, come
-% \compcategoria; il vskip stacca visivamente i gruppi).
+% Riga voce e riga di gruppo.  Le intestazioni di gruppo NON partecipano
+% alla zebratura (altrimenti risulterebbero grigie o bianche a caso, a
+% seconda della parita della riga) e la zebratura RIPARTE da bianco a
+% ogni gruppo: contatore regitem azzerato da \reg@cat.  Il vskip prima
+% di ogni intestazione stacca visivamente i gruppi.
+\newcounter{regitem}
+
 \newcommand{\reg@item}[2]{%
   \stepcounter{regrow}%
+  \stepcounter{regitem}%
   \ifnum\value{regrow}>1 \g@addto@macro\regbody{\\}\fi
-  \ifodd\value{regrow}\else \g@addto@macro\regbody{\rowcolor{colZebra}}\fi
+  \ifodd\value{regitem}\else \g@addto@macro\regbody{\rowcolor{colZebra}}\fi
   \g@addto@macro\regbody{\texttt{#1} & #2}%
 }
 
 \newcommand{\reg@cat}[1]{%
   \stepcounter{regrow}%
-  \ifnum\value{regrow}>1 \g@addto@macro\regbody{\\ \noalign{\vskip 5pt}}\fi
-  \ifodd\value{regrow}\else \g@addto@macro\regbody{\rowcolor{colZebra}}\fi
+  \setcounter{regitem}{0}%
+  \ifnum\value{regrow}>1 \g@addto@macro\regbody{\\ \noalign{\vskip 10pt}}\fi
   \g@addto@macro\regbody{\multicolumn{2}{l}{\textbf{#1}}}%
 }
 
@@ -1452,6 +1457,7 @@
   % costruzione del corpo: gruppi nell'ordine I, R, M, X, Altri
   \gdef\regbody{}%
   \setcounter{regrow}{0}%
+  \setcounter{regitem}{0}%
   \let\reg@stored\reg@item
   \reg@emit{\registroI}{I}%
   \reg@emit{\registroR}{R}%
