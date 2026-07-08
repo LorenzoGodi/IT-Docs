@@ -46,30 +46,31 @@
 %
 % INDICE SEZIONI
 % ──────────────
-%   1. Classe base ............... Identificazione, opzioni, LoadClass
-%   2. Pacchetti ................. Tutti i RequirePackage
+%   1. Classe base ............... Identificazione, opzioni ([discorsivo])
+%   2. Pacchetti ................. Tutti i RequirePackage, metadati PDF
 %   3. Colori .................... 8 definecolor (primario, stati, tabelle)
 %   4. Formattazione sezioni ..... \setsectionstyle (classico|barra|banda)
 %   5. Icone modalita ............ modRemoto, modPresenza, modAuto
 %   6. Icone stato ............... staFatto, staFacendo, staDafare, staIdea
 %   7. Lista compatta ............ ambiente D
 %   8. Comandi di utilita ........ ppf, vspaceheader, tablespacing
-%   9. Formattazione valuta ...... \eur
+%   9. Formattazione valuta ...... \eur, \numero
 %  10. Caselle legenda ........... legendabox, legendaModalita, legendaStato
-%  11. Separatore righe .......... \rowsep
+%  11. Configurazione ............ \ITDocsSetup (colori, logo), \doclogo
 %  12. Sistema riferimenti ....... defref, rif, rifdesc
 %  12b.Data documento automatica . \setdocdata, data max attivita
-%  13. Comando attivita .......... \att (con tracciamento data)
+%  13. Comando attivita .......... \att (tracciamento data, \ripetidate)
 %  14. Comando roadmap ........... \road
 %  15. Rapporto ore .............. addhours, totale fp \tothoursval
 %  16. Sottrazioni ............... addsubt, totale fp \totsubtval
 %  17. Tabelle riusabili ......... tabellaAttivita, tabellaRoadmap,
-%                                  tabellaOre, tabellaSottrazioni
+%                                  tabellaOre, tabellaSottrazioni,
+%                                  \saldodovuto
 %  18. Sezione report ............ \reportsezione
 %  19. Componenti preventivo ..... comp, tabellaComponenti, preventivototali
 %  20. Toggle orientamento ....... setlandscape, setportrait
 %  21. Layout pagina ............. fancyhdr, secnumdepth, parindent
-%  22. Logo ...................... \showlogo
+%  22. Logo ...................... \showlogo (altezza via ITDocsSetup)
 %
 
 
@@ -77,23 +78,33 @@
 % ─── Identificazione classe ─────────────────────────────────────────────────
 %
 % \NeedsTeXFormat specifica la versione minima di LaTeX richiesta.
-% Usiamo 2020/10/01 perche da quella data il kernel LaTeX include
-% nativamente \NewDocumentCommand e il supporto L3 per \fpeval.
+% Usiamo 2022/06/01 perche da quella data il kernel LaTeX include
+% nativamente \NewDocumentCommand (xparse), \fpeval (xfp), i simboli
+% di textcomp e il layer di programmazione expl3: nessuno di quei
+% pacchetti va piu caricato.
 %
 % \ProvidesClass registra il nome, la data e la descrizione della classe.
 % La data segue il formato ISO: AAAA/MM/GG.
 %
-\NeedsTeXFormat{LaTeX2e}[2020/10/01]
-\ProvidesClass{IT-Docs}[2026/07/03 v1.1 Classe documenti IT professionali]
+\NeedsTeXFormat{LaTeX2e}[2022/06/01]
+\ProvidesClass{IT-Docs}[2026/07/08 v1.2 Classe documenti IT professionali]
 
 
 % ─── Opzioni ────────────────────────────────────────────────────────────────
 %
-% Tutte le opzioni passate a IT-Docs vengono inoltrate alla classe base.
-% Questo permette di scrivere:
-%   \documentclass[a4paper,9pt]{IT-Docs}
-% e avere a4paper e 9pt gestiti normalmente dalla classe base.
+% discorsivo
+%   Margini laterali piu ampi (2cm invece di 1cm) per i documenti
+%   prevalentemente testuali (report, proposte): con 1cm la giustezza
+%   arriva a ~110 battute per riga, faticosa da leggere.  I documenti
+%   tabellari (resoconti, preventivi) restano a 1cm per sfruttare la
+%   larghezza.
 %
+% Tutte le altre opzioni vengono inoltrate alla classe base:
+%   \documentclass[a4paper,9pt]{IT-Docs}
+%   \documentclass[a4paper,9pt,discorsivo]{IT-Docs}
+%
+\newif\if@itdocs@discorsivo \@itdocs@discorsivofalse
+\DeclareOption{discorsivo}{\@itdocs@discorsivotrue}
 \DeclareOption*{\PassOptionsToClass{\CurrentOption}{extarticle}}
 \ProcessOptions\relax
 
@@ -143,10 +154,10 @@
 %   Il LaTeX moderno lo usa gia di default, ma caricarlo esplicitamente
 %   rende l'assunzione visibile e previene sorprese.
 %
-% lmodern, textcomp
+% lmodern
 %   Latin Modern: versione moderna e scalabile di Computer Modern.
-%   textcomp fornisce simboli aggiuntivi come \texteuro.
 %   Senza lmodern, la codifica T1 ricadrebbe sui font bitmap.
+%   (I simboli di textcomp, incluso \texteuro, sono nel kernel dal 2020.)
 %
 % microtype
 %   Abilita raffinamenti tipografici invisibili singolarmente ma che
@@ -154,7 +165,7 @@
 %   caratteri ed espansione del font per ridurre le sillabazioni.
 %
 \RequirePackage[utf8]{inputenc}
-\RequirePackage{lmodern,textcomp}
+\RequirePackage{lmodern}
 \RequirePackage[T1]{fontenc}
 \RequirePackage{microtype}
 
@@ -170,13 +181,24 @@
 % ─── Layout ──────────────────────────────────────────────────────────────────
 %
 % geometry
-%   Imposta le dimensioni della pagina.  Margini stretti (1 cm laterali)
-%   per massimizzare lo spazio utile in documenti densi di tabelle.
+%   Imposta le dimensioni della pagina.  Margini laterali stretti (1 cm)
+%   per massimizzare lo spazio utile in documenti densi di tabelle;
+%   con l'opzione di classe [discorsivo] salgono a 2 cm per una
+%   giustezza piu leggibile nei documenti testuali.
 %   Il top maggiorato (3 cm) lascia spazio all'header a tre colonne.
 %   headheight=38pt e necessario perche l'header contiene due righe di testo.
 %
+%   \itdocs@hmargin e condiviso con la geometria landscape di
+%   \setlandscape: un solo punto di verita per i margini laterali.
+%
+\if@itdocs@discorsivo
+  \def\itdocs@hmargin{2cm}
+\else
+  \def\itdocs@hmargin{1cm}
+\fi
+
 \RequirePackage[
-  margin=1cm,
+  hmargin=\itdocs@hmargin,
   top=3cm,
   headheight=38pt,
   headsep=1cm,
@@ -258,13 +280,11 @@
 % nicefrac
 %   Frazioni compatte stile 1/2 con \nicefrac{1}{2}.
 %
-% xfp
-%   Fornisce \fpeval per calcoli in virgola mobile — usato per
-%   calcolare importi (ore * tariffa) nei rapporti ore.
+% (\fpeval, usato per gli importi ore*tariffa, e nel kernel dal 2022:
+%  il pacchetto xfp non serve piu.)
 %
 \RequirePackage{amsmath}
 \RequirePackage{nicefrac}
-\RequirePackage{xfp}
 
 % siunitx
 %   Formattazione professionale dei numeri.  Usato da \eur e \numero per
@@ -280,14 +300,8 @@
 }
 
 
-% ─── Utility ────────────────────────────────────────────────────────────────
-%
-% xparse
-%   Estende la sintassi di \newcommand con \NewDocumentCommand, permettendo
-%   argomenti opzionali multipli, argomenti "long" (+m) e altro.
-%   Usato per i comandi \att e \road che hanno argomenti multi-paragrafo.
-%
-\RequirePackage{xparse}
+% (\NewDocumentCommand — usato per \att, \road, \eur, ecc. — e nel
+%  kernel dal 2020: il pacchetto xparse non serve piu.)
 
 
 % ─── Icone ───────────────────────────────────────────────────────────────────
@@ -345,6 +359,20 @@
 \RequirePackage[hidelinks]{hyperref}
 \RequirePackage{fancyhdr}
 \RequirePackage{lastpage}
+
+% ─── Metadati PDF ───────────────────────────────────────────────────────────
+%
+% Titolo e autore nelle proprieta del PDF: il cliente che apre il file
+% vede "RESOCONTO 2025/1 (Studio X)" nella finestra del viewer invece
+% di un campo vuoto.  Impostati ad inizio documento, quando \doctitolo,
+% \docstudio e \docautore sono ormai definiti.
+%
+\AtBeginDocument{%
+  \hypersetup{
+    pdftitle={\doctitolo\ (\docstudio)},
+    pdfauthor={\docautore},
+  }%
+}
 %#endregion Pacchetti
 
 
@@ -671,21 +699,60 @@
 %#endregion Caselle legenda
 
 
-%#region Separatore righe
+%#region Configurazione
 % =============================================================================
 %
-%  SEPARATORE RIGHE TABELLE
+%  CONFIGURAZIONE
 %
 % =============================================================================
 %
-% \rowsep
-%   Semplice alias per \\, usato come separatore tra righe nelle tabelle
-%   roadmap e componenti.  Definito come comando per uniformita e per
-%   permettere eventuali ridefinizioni locali (es. aggiungere \hline).
+% \ITDocsSetup{chiave=valore, ...}
+%   Personalizza l'identita visiva senza toccare la classe.  Da usare
+%   tipicamente in shared/info_common.tex dello studio.
+%
+%   Chiavi disponibili:
+%     primario = RRGGBB   colore identitario (titoli, filetti header)
+%     fatto    = RRGGBB   icona stato: completato
+%     facendo  = RRGGBB   icona stato: in corso
+%     dafare   = RRGGBB   icona stato: programmato
+%     idea     = RRGGBB   icona stato: proposte/idee
+%     zebra    = RRGGBB   sfondo righe alternate delle tabelle
+%     legenda  = RRGGBB   sfondo caselle legenda
+%     totale   = RRGGBB   sfondo celle Totale
+%     tablestretch = N    interlinea righe tabella (default 1.8)
+%     logoaltezza  = DIM  altezza del logo nell'angolo (default 0.7cm)
+%
+%   Esempio: \ITDocsSetup{primario=00695C, logoaltezza=0.9cm}
+%
+% \doclogo
+%   Nome file del logo usato dai template (default LG_logo.png, risolto
+%   via TEXINPUTS in IT-Docs/img/).  Ridefinibile per studio con
+%   \renewcommand{\doclogo}{MioLogo.png} in info_common.tex.
 % =============================================================================
 
-\newcommand{\rowsep}{\\}
-%#endregion Separatore righe
+\newlength{\itdocslogoheight}
+\setlength{\itdocslogoheight}{0.7cm}
+
+\newcommand{\doclogo}{LG_logo.png}
+
+\ExplSyntaxOn
+\keys_define:nn { itdocs }
+  {
+    primario .code:n = { \definecolor{colPrimario}{HTML}{#1} },
+    fatto    .code:n = { \definecolor{colFatto}{HTML}{#1} },
+    facendo  .code:n = { \definecolor{colFacendo}{HTML}{#1} },
+    dafare   .code:n = { \definecolor{colDafare}{HTML}{#1} },
+    idea     .code:n = { \definecolor{colIdea}{HTML}{#1} },
+    zebra    .code:n = { \definecolor{colZebra}{HTML}{#1} },
+    legenda  .code:n = { \definecolor{colLegenda}{HTML}{#1} },
+    totale   .code:n = { \definecolor{colTotale}{HTML}{#1} },
+    tablestretch .code:n =
+      { \renewcommand{\tablespacing}{\renewcommand{\arraystretch}{#1}} },
+    logoaltezza .code:n = { \setlength{\itdocslogoheight}{#1} },
+  }
+\NewDocumentCommand{\ITDocsSetup}{m}{ \keys_set:nn { itdocs } {#1} }
+\ExplSyntaxOff
+%#endregion Configurazione
 
 
 %#region Sistema riferimenti
@@ -772,10 +839,27 @@
 % Callback scritto nel .aux: propaga il massimo al run successivo.
 \newcommand{\docdatecache}[1]{\gdef\docdate@auxstr{#1}}
 
+% \itdocs@ifdataformat{testo}{vero}{falso}
+%   Esegue "vero" se il testo e esattamente GG/MM/AAAA, "falso" altrimenti.
+%   Usato per validare le date prima di parsarle: senza questo controllo
+%   una data malformata in \att esploderebbe dentro \numexpr con errori
+%   di basso livello che non menzionano ne \att ne il formato atteso.
+\ExplSyntaxOn
+\NewDocumentCommand{\itdocs@ifdataformat}{mmm}
+  { \regex_match:nnTF { \A\d\d/\d\d/\d\d\d\d\Z } {#1} {#2} {#3} }
+\ExplSyntaxOff
+
 % \docdate@track{GG/MM/AAAA} — aggiorna il massimo (chiamato da \att).
+% Le date non conformi vengono ignorate con un warning esplicito.
 % NB: si memorizza il VALORE espanso (\xdef), non il token \docdate@n,
 % altrimenti la successiva \edef ne cambierebbe anche il massimo.
-\def\docdate@track#1{\docdate@track@#1\@nil}
+\def\docdate@track#1{%
+  \itdocs@ifdataformat{#1}%
+    {\docdate@track@#1\@nil}%
+    {\ClassWarning{IT-Docs}{%
+       Data '\detokenize{#1}' di \string\att\space non in formato
+       GG/MM/AAAA:\MessageBreak ignorata per la data documento automatica}}%
+}
 \def\docdate@track@#1/#2/#3\@nil{%
   \edef\docdate@n{\number\numexpr#3*10000+#2*100+#1\relax}%
   \ifnum\docdate@n>\docdate@maxnum\relax
@@ -819,7 +903,15 @@
   \fi}
 
 % Override esplicito della data documento.
-\newcommand{\setdocdata}[1]{\def\docdata{#1}}
+%   \setdocdata{14/01/2026}          -> "mercoledi 14/01/2026"
+%     (giorno della settimana calcolato automaticamente: uno in meno da
+%      scrivere e nessun rischio di giorno sbagliato)
+%   \setdocdata{testo qualunque}     -> usato tale e quale
+\newcommand{\setdocdata}[1]{%
+  \itdocs@ifdataformat{#1}%
+    {\def\docdata{\docdate@weekday{#1} #1}}%
+    {\def\docdata{#1}}%
+}
 
 % Se il documento non ha definito \docdata, usala automatica.
 \AtBeginDocument{\@ifundefined{docdata}{\def\docdata{\docdate@auto}}{}}
@@ -867,6 +959,12 @@
 \gdef\att@prevdate{@NONE@}
 \newcounter{attrow}
 
+% Confronto stringhe portabile (kernel expl3): \pdfstrcmp e un primitivo
+% di pdfTeX e legherebbe la classe al solo motore pdflatex.
+\ExplSyntaxOn
+\cs_new_eq:NN \itdocs@strifeqTF \str_if_eq:eeTF
+\ExplSyntaxOff
+
 % Deduplica data: di default, se la data e uguale alla riga precedente la
 % cella "Data" resta vuota.  \ripetidate (nel preambolo / info.tex) disattiva
 % la deduplica e fa stampare la data su OGNI riga.
@@ -881,7 +979,7 @@
   \if@attrep
     \g@addto@macro\attbody{#1}%
   \else
-    \ifnum\pdfstrcmp{#1}{\att@prevdate}=0\relax\else \g@addto@macro\attbody{#1}\fi
+    \itdocs@strifeqTF{#1}{\att@prevdate}{}{\g@addto@macro\attbody{#1}}%
   \fi
   \gdef\att@prevdate{#1}%
   \g@addto@macro\attbody{& #2 & #3 & #4 & #5\ppf}%
@@ -1036,7 +1134,7 @@
       >{\ttfamily\centering\arraybackslash}p{0.05\linewidth}
   }
       \textbf{Data} & \textnormal{\textbf{Rif.}} & \textbf{Descrizione attivit\`a} & \multicolumn{2}{c}{\textnormal{\textbf{Ore}}}
-      \\ \midrule[\heavyrulewidth]
+      \\ \arrayrulecolor{colPrimario}\midrule[\heavyrulewidth]\arrayrulecolor{black}
   \attbody
   \end{tabularx}
   }%
@@ -1068,7 +1166,7 @@
       | >{\arraybackslash}p{0.3\linewidth}
   }
       \textnormal{\textbf{\normalsize Rif.}} & \textbf{Descrizione} & \textbf{Stato} & \textbf{Urgenza} & \textbf{Commenti}
-      \\ \midrule[\heavyrulewidth]
+      \\ \arrayrulecolor{colPrimario}\midrule[\heavyrulewidth]\arrayrulecolor{black}
   \roadbody
   \end{tabularx}
   }%
@@ -1119,7 +1217,7 @@
           | >{\raggedleft\arraybackslash}p{20mm}
       }
           \textbf{Data} & \textbf{Ore} & \textbf{Importo}
-          \\ \midrule[\heavyrulewidth]
+          \\ \arrayrulecolor{colPrimario}\midrule[\heavyrulewidth]\arrayrulecolor{black}
           \hoursbody
           \\ \noalign{\vskip 6pt} \hhline{~|--|}
           \multicolumn{1}{r}{\textbf{Totale}}
@@ -1165,7 +1263,7 @@
           | >{\raggedleft\arraybackslash}p{20mm}
       }
           \textbf{Data} & \textbf{Info} & \textbf{Importo}
-          \\ \midrule[\heavyrulewidth]
+          \\ \arrayrulecolor{colPrimario}\midrule[\heavyrulewidth]\arrayrulecolor{black}
           \subtbody
           \\ \noalign{\vskip 6pt} \hhline{~~|-|}
           \multicolumn{2}{r}{\textbf{Totale}}
@@ -1176,6 +1274,38 @@
   \end{minipage}
 }
 \makeatother
+
+
+% ─── Saldo dovuto ───────────────────────────────────────────────────────────
+%
+% \saldodovuto
+%   Riga conclusiva del resoconto: l'importo netto che il cliente deve
+%   corrispondere = (ore totali * tariffa) - sottrazioni totali.
+%   E la riga che chiude il conto della pseudo-fattura: senza di essa
+%   il cliente deve sottrarre a mano i due totali.
+%
+%   Va chiamata DOPO \tabellaOre (ed eventualmente \tabellaSottrazioni):
+%   usa gli accumulatori \tothoursval e \totsubtval; se le sottrazioni
+%   non sono presenti nel documento, \totsubtval vale 0.
+%
+%   La colonna importo replica la colonna Importo (p{20mm}) delle
+%   tabelle economiche: i tre importi restano incolonnati.
+%
+\newcommand{\saldodovuto}{%
+  \vspace{6mm}%
+  \noindent\hfill
+  {\tablespacing
+  \setlength{\aboverulesep}{0pt}%
+  \setlength{\belowrulesep}{0pt}%
+  \begin{tabular}{r >{\raggedleft\arraybackslash}p{20mm}}
+    \noalign{\vskip 3pt}\hhline{~|-|}
+    \textbf{Da corrispondere}
+      & \multicolumn{1}{|>{\raggedleft\arraybackslash}p{20mm}|}{\cellcolor{colTotale}\textbf{\eur{\tothoursval*\doctariffa-\totsubtval}}}
+    \\ \hhline{~|-|}
+  \end{tabular}%
+  }%
+  \par
+}
 %#endregion Tabelle riusabili
 
 
@@ -1279,7 +1409,7 @@
       | >{\raggedleft\arraybackslash}p{20mm}
   }
       \textbf{Componente} & \textbf{Range} & \textbf{Proposta} & \textbf{Prezzo}
-      \\ \midrule[\heavyrulewidth]
+      \\ \arrayrulecolor{colPrimario}\midrule[\heavyrulewidth]\arrayrulecolor{black}
   \compbody
   \end{tabularx}
   }%
@@ -1342,7 +1472,7 @@
   \iflandscapemode
     \newgeometry{
       landscape,
-      margin=1cm,
+      hmargin=\itdocs@hmargin,
       top=3cm,
       headheight=38pt,
       headsep=1cm,
@@ -1446,7 +1576,9 @@
 %   l'immagine nel foreground di ogni pagina.
 %
 %   Uso tipico (nei template):
-%     \showlogo{\shareddir/img/LG_logo.png}
+%     \showlogo{\doclogo}
+%
+%   L'altezza (default 0.7cm) si cambia con \ITDocsSetup{logoaltezza=...}.
 % =============================================================================
 
 \newcommand{\showlogo}[1]{%
@@ -1455,7 +1587,7 @@
       \LenToUnit{\paperwidth-1.42cm},
       \LenToUnit{\paperheight-0.83cm}
     ){\vtop{{\null}\makebox[0pt][c]{
-      \includegraphics[height=.7cm]{#1}
+      \includegraphics[height=\itdocslogoheight]{#1}
     }}}%
   }%
 }

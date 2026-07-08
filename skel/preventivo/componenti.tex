@@ -1,0 +1,13 @@
+% Corpo del preventivo: testo introduttivo, tabella componenti, totali.
+
+\subsection*{Proposta componenti}
+
+% Obiettivi, note sui prezzi...
+\vspace{4mm}
+
+\tabellaComponenti{\datadir/comp_lista}
+
+% Blocco totali: righe secondarie con \totriga, riga finale evidenziata.
+\preventivototali{%
+    % \totriga{Totale indicativo (esente IVA)}{0}%
+}{Totale indicativo (IVA inclusa)}{0}

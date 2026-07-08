@@ -1,0 +1,17 @@
+% ==========================================================
+% Template body preventivo (condiviso tra gli studi)
+% Richiede: \datadir e \docsottotitolo definiti prima di \input
+%
+% Documento commerciale: usa lo stile sezione "banda" (banda piena
+% nel colore primario con testo bianco).
+% ==========================================================
+
+\showlogo{\doclogo}
+
+\setsectionstyle{banda}
+
+\renewcommand{\arraystretch}{1.5}
+
+\section{\doctitolo{} --- \docsottotitolo}
+
+\input{\datadir/componenti}

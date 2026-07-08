@@ -1,0 +1,39 @@
+% ==========================================================
+% Template body resoconto (condiviso tra gli studi)
+% Richiede: \datadir definito prima di \input.
+%
+% File dati attesi in \datadir:
+%   nuove_att.tex    (obbligatorio)  righe \att
+%   roadmap.tex      (obbligatorio)  righe \road
+%   saldo_ore.tex    (obbligatorio)  righe \addhours
+%   saldo_sottr.tex  (OPZIONALE)     righe \addsubt — la sezione
+%                                    Sottrazioni compare solo se esiste
+% ==========================================================
+
+\showlogo{\doclogo}
+
+\renewcommand{\arraystretch}{1.5}
+
+\section{Nuove attivit\`a svolte}
+\legendaModalita
+\vspace{6mm}
+\tabellaAttivita{\datadir/nuove_att}
+
+\newpage
+\section{Roadmap}
+Attivit\`a completate, in corso e programmate al d\`i: \docdata.
+\\[2mm]
+\legendaStato
+\vspace{4mm}
+\tabellaRoadmap{\datadir/roadmap}
+
+\newpage
+\section{Rapporto ore}
+\tabellaOre{\datadir/saldo_ore}
+
+\IfFileExists{\datadir/saldo_sottr.tex}{%
+  \section{Sottrazioni}
+  \tabellaSottrazioni{\datadir/saldo_sottr}
+}{}
+
+\saldodovuto
