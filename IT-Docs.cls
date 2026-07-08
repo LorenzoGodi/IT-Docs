@@ -999,7 +999,7 @@
 %
 % =============================================================================
 %
-% \att{data}{riferimento}{descrizione}{modalita}{ore}
+% \att{data}{codice}{descrizione}{modalita}{ore}
 %
 %   Genera una riga nella tabella attivita.  Se la data e uguale alla
 %   riga precedente, la cella "data" resta vuota per evitare ripetizioni
@@ -1007,8 +1007,14 @@
 %
 %   Argomenti:
 %     #1 = data        (es. "17/09/2025")
-%     #2 = riferimento (es. "\rif{M2503}")
-%     #3 = descrizione (puo contenere \begin{D}...\end{D} — argomento +m)
+%     #2 = codice      (NUDO, es. "M2503": la validazione \rif e la
+%                       stampa nel formato della colonna le fa la classe)
+%     #3 = descrizione (puo contenere \begin{D}...\end{D} — argomento +m).
+%                       VUOTA ({}) = usa il titolo registrato nel
+%                       registro riferimenti (\rifdesc): il titolo di un
+%                       item si scrive UNA volta sola, in riferimenti.tex.
+%                       Testo esplicito = dettaglio della sessione, usato
+%                       tale e quale (es. "Ordine nuovo PC" su R2501).
 %     #4 = modalita    (es. "\modRemoto")
 %     #5 = ore         (es. "3")
 %
@@ -1055,7 +1061,13 @@
     \itdocs@strifeqTF{#1}{\att@prevdate}{}{\g@addto@macro\attbody{#1}}%
   \fi
   \gdef\att@prevdate{#1}%
-  \g@addto@macro\attbody{& #2 & #3 & #4 & #5\ppf}%
+  \g@addto@macro\attbody{& \rif{#2} & }%
+  \if\relax\detokenize{#3}\relax
+    \g@addto@macro\attbody{\rifdesc{#2}}%
+  \else
+    \g@addto@macro\attbody{#3}%
+  \fi
+  \g@addto@macro\attbody{ & #4 & #5\ppf}%
 }
 \makeatother
 %#endregion Comando attivita
@@ -1068,15 +1080,17 @@
 %
 % =============================================================================
 %
-% \road{riferimento}{descrizione}{stato}{urgenza}{commenti}
+% \road{codice}{descrizione}{stato}{urgenza}{commenti}
 %
 %   Accumula una riga nel token-macro \roadbody (separatore e zebra
 %   inclusi), che \tabellaRoadmap inserisce poi in blocco.  Non stampa
 %   nulla di per se.
 %
 %   Argomenti:
-%     #1 = riferimento (es. "\rif{R2501}")
-%     #2 = descrizione (argomento +m per contenuto multi-riga)
+%     #1 = codice      (NUDO, es. "R2501", come in \att)
+%     #2 = descrizione (argomento +m per contenuto multi-riga).
+%                       VUOTA ({}) = titolo dal registro riferimenti;
+%                       testo esplicito = usato tale e quale.
 %     #3 = stato       (es. "\staFatto")
 %     #4 = urgenza     (testo libero)
 %     #5 = commenti    (argomento +m per contenuto multi-riga)
@@ -1093,7 +1107,13 @@
   \stepcounter{roadrow}%
   \ifnum\value{roadrow}>1 \g@addto@macro\roadbody{\\}\fi
   \ifodd\value{roadrow}\else \g@addto@macro\roadbody{\rowcolor{colZebra}}\fi
-  \g@addto@macro\roadbody{#1 & #2 & #3 & #4 & #5}%
+  \g@addto@macro\roadbody{\rif{#1} & }%
+  \if\relax\detokenize{#2}\relax
+    \g@addto@macro\roadbody{\rifdesc{#1}}%
+  \else
+    \g@addto@macro\roadbody{#2}%
+  \fi
+  \g@addto@macro\roadbody{ & #3 & #4 & #5}%
 }
 \makeatother
 %#endregion Comando roadmap
