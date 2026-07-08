@@ -1169,21 +1169,22 @@
 %   importi con centesimi (es. 12.99), lo scenario normale per gli
 %   acquisti.  Azzerata da \tabellaSottrazioni.
 %
-% \addsubt{data}{info}{importo}
+% \addsubt{info}{importo}
 %   Accumula una riga della tabella sottrazioni nel token-macro
-%   \subtbody, con la stessa logica di \addhours.
+%   \subtbody, con la stessa logica di \addhours.  Le sottrazioni non
+%   hanno data: la tabella ha solo Info e Importo.
 % =============================================================================
 
 \makeatletter
 \gdef\totsubtval{0}
 \newcounter{subtrow}
 
-\NewDocumentCommand{\addsubt}{m m m}{%
+\NewDocumentCommand{\addsubt}{m m}{%
   \stepcounter{subtrow}%
   \ifnum\value{subtrow}>1 \g@addto@macro\subtbody{\\}\fi
   \ifodd\value{subtrow}\else \g@addto@macro\subtbody{\rowcolor{colZebra}}\fi
-  \g@addto@macro\subtbody{#1 & #2 & \eur{#3}}%
-  \xdef\totsubtval{\fpeval{\totsubtval+(#3)}}%
+  \g@addto@macro\subtbody{#1 & \eur{#2}}%
+  \xdef\totsubtval{\fpeval{\totsubtval+(#2)}}%
 }
 \makeatother
 %#endregion Sottrazioni
@@ -1332,12 +1333,14 @@
 % ─── Tabella sottrazioni ───────────────────────────────────────────────────
 %
 % \tabellaSottrazioni{file}
-%   Stile e ancoraggio identici a \tabellaOre.  Colonne: Data 22mm |
-%   Info 43mm | Importo 20mm (stesso totale di 85mm: impilate, le due
-%   tabelle coincidono su entrambi i bordi e la colonna Importo resta
-%   incolonnata).  Riga Totale in coda.
+%   Stile e ancoraggio identici a \tabellaOre.  Colonne: Info | Importo
+%   20mm.  La larghezza di Info e calcolata perche il TOTALE della
+%   tabella coincida con quello di \tabellaOre (che ha una colonna e
+%   un filetto in piu): 65mm + i 2 \tabcolsep e il filetto risparmiati.
+%   Impilate, le due tabelle coincidono su entrambi i bordi e la
+%   colonna Importo resta incolonnata.  Riga Totale in coda.
 %
-%   Il file deve contenere chiamate \addsubt{}{}{}, che accumulano le
+%   Il file deve contenere chiamate \addsubt{}{}, che accumulano le
 %   righe in \subtbody (vedi regione "Sottrazioni").
 %
 \makeatletter
@@ -1355,17 +1358,16 @@
   \setlength{\aboverulesep}{0pt}%
   \setlength{\belowrulesep}{0pt}%
   \begin{tabular}[t]{
-      >{\raggedright\arraybackslash}p{22mm}
-      | >{\raggedright\arraybackslash}p{43mm}
+      >{\raggedright\arraybackslash}p{\dimexpr 65mm+2\tabcolsep+\arrayrulewidth\relax}
       | >{\raggedleft\arraybackslash}p{20mm}
   }
-      \textbf{Data} & \textbf{Info} & \textbf{Importo}
+      \textbf{Info} & \textbf{Importo}
       \\ \arrayrulecolor{colPrimario}\midrule[\heavyrulewidth]\arrayrulecolor{black}
       \subtbody
-      \\ \noalign{\vskip 6pt} \hhline{~~|-|}
-      \multicolumn{2}{r}{\textbf{Totale}}
+      \\ \noalign{\vskip 6pt} \hhline{~|-|}
+      \multicolumn{1}{r}{\textbf{Totale}}
         & \multicolumn{1}{|r|}{\cellcolor{colTotale}\textbf{\eur{\totsubtval}}}
-      \\ \hhline{~~|-|}
+      \\ \hhline{~|-|}
   \end{tabular}%
   }\par
 }
