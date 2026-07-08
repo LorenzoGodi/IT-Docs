@@ -1268,12 +1268,19 @@
 
 % ─── Tabella ore ────────────────────────────────────────────────────────────
 %
+% ALLINEAMENTO DEL BLOCCO ECONOMICO
+%   Le tabelle ore/sottrazioni e il box del saldo sono ancorati a destra
+%   con \hfill e usano SOLO colonne a larghezza fissa, con lo stesso
+%   totale (85mm di colonne + 6 \tabcolsep + 2 filetti): bordi destro e
+%   sinistro coincidono al punto per costruzione.
+%   NON si usa tabularx qui: con ltablex la larghezza effettiva puo
+%   discostarsi di qualche punto dal target (misurato: -3pt/-5.5pt),
+%   producendo tabelle visibilmente non allineate tra loro.
+%
 % \tabellaOre{file}
-%   Layout a due colonne: etichetta (e tariffa oraria) a sinistra,
-%   tabella ore a destra.  Stesso linguaggio grafico delle altre tabelle
-%   della classe: righe zebrate, filetto pesante sotto l'intestazione,
-%   nessuna cornice esterna.  In coda la riga "Totale" staccata, con
-%   sfondo colTotale e bordi propri (\hhline, che convive con colortbl).
+%   Etichetta (e tariffa oraria) a sinistra, tabella ore a destra.
+%   Colonne: Data 50mm | Ore 15mm | Importo 20mm.  In coda la riga
+%   "Totale" staccata, con sfondo colTotale e bordi \hhline.
 %
 %   La tariffa oraria (\doctariffa) viene dichiarata sotto l'etichetta:
 %   in un documento quasi-fattura il fattore unitario degli importi e
@@ -1282,11 +1289,12 @@
 %   Il file deve contenere chiamate \addhours{}{}, che accumulano le
 %   righe in \hoursbody (vedi regione "Rapporto ore").
 %
-%   Le larghezze etichetta/tabella (0.40/0.55) sono condivise con
-%   \tabellaSottrazioni: impilate nella stessa pagina, le due tabelle
-%   condividono la gabbia e la colonna Importo resta incolonnata.
-%
 \makeatletter
+% Larghezza complessiva del blocco economico (per il separatore del saldo)
+\newlength{\itdocs@ecowidth}
+\AtBeginDocument{%
+  \setlength{\itdocs@ecowidth}{\dimexpr 85mm + 6\tabcolsep + 2\arrayrulewidth\relax}}
+
 \newcommand{\tabellaOre}[1]{%
   \gdef\hoursbody{}%
   \gdef\tothoursval{0}%
@@ -1297,29 +1305,26 @@
       Nuove ore accumulate al giorno \docdata:
       \par\vspace{2mm}
       {\small\itshape Tariffa oraria: \eur{\doctariffa}/h}
-  \end{minipage}
+  \end{minipage}%
   \hfill
-  \noindent\begin{minipage}[t]{0.55\textwidth}
-      \vspace{0pt}
-      {\tablespacing
-      \setlength{\aboverulesep}{0pt}%
-      \setlength{\belowrulesep}{0pt}%
-      \begin{tabularx}{\textwidth}{
-          X
-          | >{\centering\arraybackslash}p{15mm}
-          | >{\raggedleft\arraybackslash}p{20mm}
-      }
-          \textbf{Data} & \textbf{Ore} & \textbf{Importo}
-          \\ \arrayrulecolor{colPrimario}\midrule[\heavyrulewidth]\arrayrulecolor{black}
-          \hoursbody
-          \\ \noalign{\vskip 6pt} \hhline{~|--|}
-          \multicolumn{1}{r}{\textbf{Totale}}
-            & \multicolumn{1}{|c|}{\cellcolor{colTotale}\textbf{\numero{\tothoursval}}}
-            & \multicolumn{1}{r|}{\cellcolor{colTotale}\textbf{\eur{\tothoursval*\doctariffa}}}
-          \\ \hhline{~|--|}
-      \end{tabularx}
-      }%
-  \end{minipage}
+  {\tablespacing
+  \setlength{\aboverulesep}{0pt}%
+  \setlength{\belowrulesep}{0pt}%
+  \begin{tabular}[t]{
+      >{\raggedright\arraybackslash}p{50mm}
+      | >{\centering\arraybackslash}p{15mm}
+      | >{\raggedleft\arraybackslash}p{20mm}
+  }
+      \textbf{Data} & \textbf{Ore} & \textbf{Importo}
+      \\ \arrayrulecolor{colPrimario}\midrule[\heavyrulewidth]\arrayrulecolor{black}
+      \hoursbody
+      \\ \noalign{\vskip 6pt} \hhline{~|--|}
+      \multicolumn{1}{r}{\textbf{Totale}}
+        & \multicolumn{1}{|c|}{\cellcolor{colTotale}\textbf{\numero{\tothoursval}}}
+        & \multicolumn{1}{r|}{\cellcolor{colTotale}\textbf{\eur{\tothoursval*\doctariffa}}}
+      \\ \hhline{~|--|}
+  \end{tabular}%
+  }\par
 }
 \makeatother
 
@@ -1327,9 +1332,10 @@
 % ─── Tabella sottrazioni ───────────────────────────────────────────────────
 %
 % \tabellaSottrazioni{file}
-%   Layout e stile identici a \tabellaOre (stesse larghezze 0.40/0.55 e
-%   stessa colonna Importo da 20mm: impilate, le due tabelle restano
-%   incolonnate).  Colonne: Data | Info | Importo, riga Totale in coda.
+%   Stile e ancoraggio identici a \tabellaOre.  Colonne: Data 22mm |
+%   Info 43mm | Importo 20mm (stesso totale di 85mm: impilate, le due
+%   tabelle coincidono su entrambi i bordi e la colonna Importo resta
+%   incolonnata).  Riga Totale in coda.
 %
 %   Il file deve contenere chiamate \addsubt{}{}{}, che accumulano le
 %   righe in \subtbody (vedi regione "Sottrazioni").
@@ -1343,28 +1349,25 @@
   \noindent\begin{minipage}[t]{0.40\textwidth}
       \vspace{0pt}
       Sottrazioni al giorno \docdata:
-  \end{minipage}
+  \end{minipage}%
   \hfill
-  \noindent\begin{minipage}[t]{0.55\textwidth}
-      \vspace{0pt}
-      {\tablespacing
-      \setlength{\aboverulesep}{0pt}%
-      \setlength{\belowrulesep}{0pt}%
-      \begin{tabularx}{\textwidth}{
-          >{\raggedright\arraybackslash}p{25mm}
-          | X
-          | >{\raggedleft\arraybackslash}p{20mm}
-      }
-          \textbf{Data} & \textbf{Info} & \textbf{Importo}
-          \\ \arrayrulecolor{colPrimario}\midrule[\heavyrulewidth]\arrayrulecolor{black}
-          \subtbody
-          \\ \noalign{\vskip 6pt} \hhline{~~|-|}
-          \multicolumn{2}{r}{\textbf{Totale}}
-            & \multicolumn{1}{|r|}{\cellcolor{colTotale}\textbf{\eur{\totsubtval}}}
-          \\ \hhline{~~|-|}
-      \end{tabularx}
-      }%
-  \end{minipage}
+  {\tablespacing
+  \setlength{\aboverulesep}{0pt}%
+  \setlength{\belowrulesep}{0pt}%
+  \begin{tabular}[t]{
+      >{\raggedright\arraybackslash}p{22mm}
+      | >{\raggedright\arraybackslash}p{43mm}
+      | >{\raggedleft\arraybackslash}p{20mm}
+  }
+      \textbf{Data} & \textbf{Info} & \textbf{Importo}
+      \\ \arrayrulecolor{colPrimario}\midrule[\heavyrulewidth]\arrayrulecolor{black}
+      \subtbody
+      \\ \noalign{\vskip 6pt} \hhline{~~|-|}
+      \multicolumn{2}{r}{\textbf{Totale}}
+        & \multicolumn{1}{|r|}{\cellcolor{colTotale}\textbf{\eur{\totsubtval}}}
+      \\ \hhline{~~|-|}
+  \end{tabular}%
+  }\par
 }
 \makeatother
 
@@ -1382,10 +1385,16 @@
 %   non sono presenti nel documento, \totsubtval vale 0.
 %
 %   La colonna importo replica la colonna Importo (p{20mm}) delle
-%   tabelle economiche: i tre importi restano incolonnati.
+%   tabelle economiche e l'ancoraggio a destra e lo stesso: i tre
+%   importi restano incolonnati.  Un filetto in colPrimario largo
+%   quanto il blocco economico separa il saldo dalle tabelle, come la
+%   riga di chiusura di una fattura.
 %
+\makeatletter
 \newcommand{\saldodovuto}{%
-  \vspace{6mm}%
+  \par\vspace{5mm}%
+  \noindent\hfill{\color{colPrimario}\rule{\itdocs@ecowidth}{0.6pt}}\par
+  \vspace{2mm}%
   \noindent\hfill
   {\tablespacing
   \setlength{\aboverulesep}{0pt}%
@@ -1399,6 +1408,7 @@
   }%
   \par
 }
+\makeatother
 
 
 % ─── Tabella registro riferimenti ──────────────────────────────────────────
