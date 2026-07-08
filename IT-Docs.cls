@@ -1379,6 +1379,100 @@
   }%
   \par
 }
+
+
+% ─── Tabella registro riferimenti ──────────────────────────────────────────
+%
+% \tabellaRegistro{file}
+%   Indice di tutti i codici riferimento, RAGGRUPPATO PER TIPOLOGIA
+%   (la prima lettera del codice), nello stile delle altre tabelle
+%   della classe.  Usata nello storico.
+%
+%   Il file (tipicamente shared/riferimenti.tex) viene riletto con
+%   \defref ridefinito localmente: ogni voce viene smistata nel gruppo
+%   della sua lettera iniziale.  L'ordine dei gruppi e fisso
+%   (I, R, M, X); le voci di tipi non riconosciuti finiscono nel
+%   gruppo "Altri" in coda.  L'ordine DENTRO il gruppo e quello del file.
+%
+%   Le etichette dei gruppi sono ridefinibili per studio:
+%     \renewcommand{\registroI}{...}   (idem R, M, X, Altri)
+%
+%   Per aggiungere una tipologia: definire \registro<Lettera> e
+%   aggiungere la lettera in \tabellaRegistro (accumulatore + emissione).
+%
+\makeatletter
+\newcommand{\registroI}{Incident --- guasti e malfunzionamenti}
+\newcommand{\registroR}{Request --- richieste e nuove attivit\`a}
+\newcommand{\registroM}{Maintenance --- manutenzione ordinaria}
+\newcommand{\registroX}{Extra --- attivit\`a fuori perimetro IT}
+\newcommand{\registroAltri}{Altri}
+
+\newcounter{regrow}
+
+% Prima lettera di un codice ("I2501" -> "I")
+\def\reg@first#1#2\@nil{#1}
+
+% Riga voce e riga di gruppo: stesso pattern accumulatore/zebra delle
+% altre tabelle (le righe di gruppo contano nella zebratura, come
+% \compcategoria; il vskip stacca visivamente i gruppi).
+\newcommand{\reg@item}[2]{%
+  \stepcounter{regrow}%
+  \ifnum\value{regrow}>1 \g@addto@macro\regbody{\\}\fi
+  \ifodd\value{regrow}\else \g@addto@macro\regbody{\rowcolor{colZebra}}\fi
+  \g@addto@macro\regbody{\texttt{#1} & #2}%
+}
+
+\newcommand{\reg@cat}[1]{%
+  \stepcounter{regrow}%
+  \ifnum\value{regrow}>1 \g@addto@macro\regbody{\\ \noalign{\vskip 5pt}}\fi
+  \ifodd\value{regrow}\else \g@addto@macro\regbody{\rowcolor{colZebra}}\fi
+  \g@addto@macro\regbody{\multicolumn{2}{l}{\textbf{#1}}}%
+}
+
+% Emette un gruppo (etichetta + voci) solo se non e vuoto.
+\newcommand{\reg@emit}[2]{%
+  \expandafter\ifx\csname reg@g#2\endcsname\@empty\else
+    \reg@cat{#1}%
+    \csname reg@g#2\endcsname
+  \fi}
+
+\newcommand{\tabellaRegistro}[1]{%
+  \begingroup
+  % accumulatori per tipologia
+  \gdef\reg@gI{}\gdef\reg@gR{}\gdef\reg@gM{}\gdef\reg@gX{}\gdef\reg@gA{}%
+  % \defref smista la voce nel gruppo della lettera iniziale
+  \def\defref##1##2{%
+    \edef\reg@l{\reg@first##1\@nil}%
+    \ifcsname reg@g\reg@l\endcsname
+      \expandafter\g@addto@macro\csname reg@g\reg@l\endcsname{\reg@stored{##1}{##2}}%
+    \else
+      \g@addto@macro\reg@gA{\reg@stored{##1}{##2}}%
+    \fi}%
+  \input{#1}%
+  % costruzione del corpo: gruppi nell'ordine I, R, M, X, Altri
+  \gdef\regbody{}%
+  \setcounter{regrow}{0}%
+  \let\reg@stored\reg@item
+  \reg@emit{\registroI}{I}%
+  \reg@emit{\registroR}{R}%
+  \reg@emit{\registroM}{M}%
+  \reg@emit{\registroX}{X}%
+  \reg@emit{\registroAltri}{A}%
+  {\tablespacing
+  \setlength{\aboverulesep}{0pt}%
+  \setlength{\belowrulesep}{0pt}%
+  \begin{tabularx}{\textwidth}{
+      >{\ttfamily}l
+      | >{\arraybackslash}X
+  }
+      \textnormal{\textbf{Codice}} & \textbf{Descrizione}
+      \\ \arrayrulecolor{colPrimario}\midrule[\heavyrulewidth]\arrayrulecolor{black}
+      \regbody
+  \end{tabularx}
+  }%
+  \endgroup
+}
+\makeatother
 %#endregion Tabelle riusabili
 
 
