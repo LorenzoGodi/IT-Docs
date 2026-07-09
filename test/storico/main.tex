@@ -1,0 +1,43 @@
+\documentclass[a4paper,9pt]{IT-Docs}
+
+\def\shareddir{../shared}
+
+\input{\shareddir/riferimenti}
+\input{\shareddir/info_common}
+
+\newcommand{\doctitolo}{STORICO RIFERIMENTI}
+\newcommand{\docdata}{\today}
+\newcommand{\doctariffa}{22}
+
+\NewDocumentCommand{\includeresoconto}{m m}{%
+  \def\datadir{#1}%
+  \section{#2}%
+  \subsection*{Attivit\`a svolte}
+  \legendaModalita
+  \vspace{4mm}
+  \tabellaAttivita{\datadir/nuove_att}
+  \vspace{6mm}
+  \subsection*{Roadmap}
+  \legendaStato
+  \vspace{4mm}
+  \tabellaRoadmap{\datadir/roadmap}
+  \newpage
+}
+
+\begin{document}
+
+\showlogo{\doclogo}
+
+\setlength\parindent{0pt}
+\renewcommand{\arraystretch}{1.5}
+
+\section{Registro Riferimenti}
+
+% Deve raggruppare per tipologia e mettere Z2601 nel gruppo "Altri".
+\tabellaRegistro{\shareddir/riferimenti}
+
+\newpage
+
+\includeresoconto{../resoconto}{Resoconto 2026/1}
+
+\end{document}

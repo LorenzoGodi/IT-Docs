@@ -1,0 +1,26 @@
+# Test end-to-end della classe: compila lo studio di prova in test/
+# (tutti i tipi di documento) e verifica i contenuti dei PDF.
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Compila ed esegue le asserzioni
+    runs-on: ubuntu-latest
+    container:
+      image: texlive/texlive:latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Strumenti (ghostscript per le asserzioni sul testo)
+        run: |
+          command -v gs >/dev/null || (apt-get update && apt-get install -y --no-install-recommends ghostscript)
+
+      - name: Esegui i test
+        run: sh test/run.sh

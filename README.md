@@ -88,6 +88,19 @@ tipologia, per lo storico).
 \setsectionstyle{banda}                   % stili titoli: classico|barra|banda
 ```
 
+## Test
+
+`test/` contiene uno studio di prova che esercita tutta la classe: i
+cinque tipi di documento più le asserzioni sui contenuti dei PDF
+(totali con decimali, separatore delle migliaia, titoli e date
+automatici, registro raggruppato, nessun riferimento irrisolto).
+
+```sh
+sh test/run.sh     # richiede pdflatex (TeX Live completo) e ghostscript
+```
+
+La GitHub Action `Test` lo esegue a ogni push e pull request.
+
 ## Versioni
 
 v1.2 — vedi `git log` per la storia completa; il dettaglio di ogni
