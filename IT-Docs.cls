@@ -68,7 +68,7 @@
 %                                  tabellaOre, tabellaSottrazioni,
 %                                  \saldodovuto
 %  18. Sezione report ............ \reportsezione
-%  19. Componenti preventivo ..... comp, tabellaComponenti, preventivototali
+%  19. Componenti preventivo ..... comp, tabellaComponenti, preventivototali, compalt
 %  20. Toggle orientamento ....... setlandscape, setportrait
 %  21. Layout pagina ............. fancyhdr, secnumdepth, parindent
 %  22. Logo ...................... \showlogo (altezza via ITDocsSetup)
@@ -88,7 +88,7 @@
 % La data segue il formato ISO: AAAA/MM/GG.
 %
 \NeedsTeXFormat{LaTeX2e}[2022/06/01]
-\ProvidesClass{IT-Docs}[2026/07/08 v1.2 Classe documenti IT professionali]
+\ProvidesClass{IT-Docs}[2026/07/09 v1.3 Classe documenti IT professionali]
 
 
 % ─── Opzioni ────────────────────────────────────────────────────────────────
@@ -1646,6 +1646,20 @@
 
 % Compatibilita con la vecchia API a riga singola.
 \newcommand{\preventivototale}[2]{\preventivototali{}{#1}{#2}}
+
+% \compalt{titolo}{testo}{prezzo}{nota}
+%   Voce dei "Miglioramenti opzionali" (alternative/upgrade del preventivo):
+%     titolo in grassetto,
+%     testo con il prezzo allineato a destra (es. + \eur{130} (esente IVA \eur{100})),
+%     nota in corsivo.
+%   Le voci vivono in un file dati (comp_alt.tex) incluso da componenti.tex
+%   con \input{\datadir/comp_alt}; la webui le edita come tabella.
+\NewDocumentCommand{\compalt}{mmmm}{%
+  \par\addvspace{4mm}%
+  \noindent\textbf{#1}\\
+  #2 \hfill #3\\
+  \textit{#4}\par
+}
 %#endregion Componenti preventivo
 
 
