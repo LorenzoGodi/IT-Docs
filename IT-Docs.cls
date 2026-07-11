@@ -88,7 +88,7 @@
 % La data segue il formato ISO: AAAA/MM/GG.
 %
 \NeedsTeXFormat{LaTeX2e}[2022/06/01]
-\ProvidesClass{IT-Docs}[2026/07/09 v1.3 Classe documenti IT professionali]
+\ProvidesClass{IT-Docs}[2026/07/11 v1.5 Classe documenti IT professionali]
 
 
 % ─── Opzioni ────────────────────────────────────────────────────────────────
@@ -768,9 +768,14 @@
 % R2502, M2503).  I codici vengono definiti una sola volta nel file
 % riferimenti.tex e possono essere usati ovunque nel documento.
 %
-% \defref{CODICE}{descrizione}
+% \defref[persone]{CODICE}{descrizione}
 %   Registra un riferimento.  Internamente crea un comando \ref@CODICE
 %   contenente la descrizione.  Non produce output visibile.
+%
+%   L'argomento opzionale elenca le persone fisiche coinvolte, gia nel
+%   formato di stampa ("M. Bulla, S. Moro"): compaiono in piccolo e in
+%   grigio dopo la descrizione, sia nelle righe che usano il titolo di
+%   registro (\rifdesc) sia nella tabella registro dello storico.
 %
 %   Nello storico, \defref viene ridefinito localmente per renderizzare
 %   l'indice dei riferimenti come tabella.
@@ -784,9 +789,14 @@
 %   di fallback di \rif se il codice non esiste.
 % =============================================================================
 
-\newcommand{\defref}[2]{%
-  \expandafter\def\csname ref@#1\endcsname{#2}%
+\NewDocumentCommand{\defref}{o m m}{%
+  \expandafter\def\csname ref@#2\endcsname{#3}%
+  \IfValueT{#1}{\expandafter\def\csname refpers@#2\endcsname{#1}}%
 }
+
+% Stile unico dei tag persona accodati a una descrizione
+% (usato da \rifdesc e dalla tabella registro dello storico).
+\newcommand{\refpersone}[1]{{\footnotesize\color{black!55}(#1)}}
 
 \newcommand{\rif}[1]{%
   \ifcsname ref@#1\endcsname%
@@ -800,6 +810,9 @@
 \newcommand{\rifdesc}[1]{%
   \ifcsname ref@#1\endcsname%
     \csname ref@#1\endcsname%
+    \ifcsname refpers@#1\endcsname%
+      \ \refpersone{\csname refpers@#1\endcsname}%
+    \fi%
   \else%
     \textbf{??#1??}%
     \ClassWarning{IT-Docs}{Riferimento '#1' non definito in riferimenti.tex}%
@@ -1179,12 +1192,17 @@
 \gdef\totsubtval{0}
 \newcounter{subtrow}
 
-\NewDocumentCommand{\addsubt}{m m}{%
+% \addsubt[data]{info}{importo} — la data è opzionale: le righe storiche
+% a due argomenti restano valide e mostrano «--» nella colonna Data.
+\NewDocumentCommand{\addsubt}{o m m}{%
   \stepcounter{subtrow}%
   \ifnum\value{subtrow}>1 \g@addto@macro\subtbody{\\}\fi
   \ifodd\value{subtrow}\else \g@addto@macro\subtbody{\rowcolor{colZebra}}\fi
-  \g@addto@macro\subtbody{#1 & \eur{#2}}%
-  \xdef\totsubtval{\fpeval{\totsubtval+(#2)}}%
+  \IfNoValueTF{#1}%
+    {\g@addto@macro\subtbody{--}}%
+    {\g@addto@macro\subtbody{#1}}%
+  \g@addto@macro\subtbody{ & #2 & \eur{#3}}%
+  \xdef\totsubtval{\fpeval{\totsubtval+(#3)}}%
 }
 \makeatother
 %#endregion Sottrazioni
@@ -1358,16 +1376,17 @@
   \setlength{\aboverulesep}{0pt}%
   \setlength{\belowrulesep}{0pt}%
   \begin{tabular}[t]{
-      >{\raggedright\arraybackslash}p{\dimexpr 65mm+2\tabcolsep+\arrayrulewidth\relax}
+      >{\raggedright\arraybackslash}p{20mm}
+      | >{\raggedright\arraybackslash}p{\dimexpr 43mm+2\tabcolsep+\arrayrulewidth\relax}
       | >{\raggedleft\arraybackslash}p{20mm}
   }
-      \textbf{Info} & \textbf{Importo}
+      \textbf{Data} & \textbf{Info} & \textbf{Importo}
       \\ \arrayrulecolor{colPrimario}\midrule[\heavyrulewidth]\arrayrulecolor{black}
       \subtbody
-      \\ \noalign{\vskip 6pt} \hhline{~|-|}
-      \multicolumn{1}{r}{\textbf{Totale}}
+      \\ \noalign{\vskip 6pt} \hhline{~~|-|}
+      \multicolumn{2}{r}{\textbf{Totale}}
         & \multicolumn{1}{|r|}{\cellcolor{colTotale}\textbf{\eur{\totsubtval}}}
-      \\ \hhline{~|-|}
+      \\ \hhline{~~|-|}
   \end{tabular}%
   }\par
 }
@@ -1477,13 +1496,24 @@
   \begingroup
   % accumulatori per tipologia
   \gdef\reg@gI{}\gdef\reg@gR{}\gdef\reg@gM{}\gdef\reg@gX{}\gdef\reg@gA{}%
-  % \defref smista la voce nel gruppo della lettera iniziale
-  \def\defref##1##2{%
-    \edef\reg@l{\reg@first##1\@nil}%
-    \ifcsname reg@g\reg@l\endcsname
-      \expandafter\g@addto@macro\csname reg@g\reg@l\endcsname{\reg@stored{##1}{##2}}%
+  % \defref smista la voce nel gruppo della lettera iniziale; l'eventuale
+  % [persone] viene accodato alla descrizione con \refpersone (i quattro
+  % rami evitano un'espansione controllata di un accumulatore temporaneo)
+  \def\defref{\@ifnextchar[{\reg@defo}{\reg@defo[]}}%
+  \def\reg@defo[##1]##2##3{%
+    \edef\reg@l{\reg@first##2\@nil}%
+    \if\relax\detokenize{##1}\relax
+      \ifcsname reg@g\reg@l\endcsname
+        \expandafter\g@addto@macro\csname reg@g\reg@l\endcsname{\reg@stored{##2}{##3}}%
+      \else
+        \g@addto@macro\reg@gA{\reg@stored{##2}{##3}}%
+      \fi
     \else
-      \g@addto@macro\reg@gA{\reg@stored{##1}{##2}}%
+      \ifcsname reg@g\reg@l\endcsname
+        \expandafter\g@addto@macro\csname reg@g\reg@l\endcsname{\reg@stored{##2}{##3\ \refpersone{##1}}}%
+      \else
+        \g@addto@macro\reg@gA{\reg@stored{##2}{##3\ \refpersone{##1}}}%
+      \fi
     \fi}%
   \input{#1}%
   % costruzione del corpo: gruppi nell'ordine I, R, M, X, Altri
